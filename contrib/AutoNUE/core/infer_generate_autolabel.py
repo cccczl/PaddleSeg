@@ -73,7 +73,7 @@ def reverse_transform(pred, ori_shape, transforms):
             h, w = item[1][0], item[1][1]
             pred = pred[:, :, 0:h, 0:w]
         else:
-            raise Exception("Unexpected info '{}' in im_info".format(item[0]))
+            raise Exception(f"Unexpected info '{item[0]}' in im_info")
     return pred
 
 
@@ -146,8 +146,9 @@ def slide_inference(model, im, crop_size, stride):
             logits = model(im_crop)
             if not isinstance(logits, collections.abc.Sequence):
                 raise TypeError(
-                    "The type of logits must be one of collections.abc.Sequence, e.g. list, tuple. But received {}"
-                    .format(type(logits)))
+                    f"The type of logits must be one of collections.abc.Sequence, e.g. list, tuple. But received {type(logits)}"
+                )
+
             logit = logits[0].numpy()
             if final_logit is None:
                 final_logit = np.zeros([1, logit.shape[1], h_im, w_im])
@@ -189,17 +190,17 @@ def inference(model,
         logits = model(im)
         if not isinstance(logits, collections.abc.Sequence):
             raise TypeError(
-                "The type of logits must be one of collections.abc.Sequence, e.g. list, tuple. But received {}"
-                .format(type(logits)))
+                f"The type of logits must be one of collections.abc.Sequence, e.g. list, tuple. But received {type(logits)}"
+            )
+
         logit = logits[0]
     else:
         logit = slide_inference(model, im, crop_size=crop_size, stride=stride)
-    if ori_shape is not None:
-        pred = paddle.argmax(logit, axis=1, keepdim=True, dtype='int32')
-        pred = reverse_transform(pred, ori_shape, transforms)
-        return pred
-    else:
+    if ori_shape is None:
         return logit
+    pred = paddle.argmax(logit, axis=1, keepdim=True, dtype='int32')
+    pred = reverse_transform(pred, ori_shape, transforms)
+    return pred
 
 
 def aug_inference(model,
@@ -234,8 +235,9 @@ def aug_inference(model,
         scales = [scales]
     elif not isinstance(scales, (tuple, list)):
         raise TypeError(
-            '`scales` expects float/tuple/list type, but received {}'.format(
-                type(scales)))
+            f'`scales` expects float/tuple/list type, but received {type(scales)}'
+        )
+
     final_logit = 0
     h_input, w_input = im.shape[-2], im.shape[-1]
     flip_comb = flip_combination(flip_horizontal, flip_vertical)

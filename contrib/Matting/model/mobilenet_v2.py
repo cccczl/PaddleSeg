@@ -63,15 +63,18 @@ class ConvBNLayer(nn.Layer):
             stride=stride,
             padding=padding,
             groups=num_groups,
-            weight_attr=ParamAttr(name=name + "_weights"),
-            bias_attr=False)
+            weight_attr=ParamAttr(name=f"{name}_weights"),
+            bias_attr=False,
+        )
+
 
         self._batch_norm = BatchNorm(
             num_filters,
-            param_attr=ParamAttr(name=name + "_bn_scale"),
-            bias_attr=ParamAttr(name=name + "_bn_offset"),
-            moving_mean_name=name + "_bn_mean",
-            moving_variance_name=name + "_bn_variance")
+            param_attr=ParamAttr(name=f"{name}_bn_scale"),
+            bias_attr=ParamAttr(name=f"{name}_bn_offset"),
+            moving_mean_name=f"{name}_bn_mean",
+            moving_variance_name=f"{name}_bn_variance",
+        )
 
     def forward(self, inputs, if_act=True):
         y = self._conv(inputs)
@@ -93,7 +96,9 @@ class InvertedResidualUnit(nn.Layer):
             stride=1,
             padding=0,
             num_groups=1,
-            name=name + "_expand")
+            name=f"{name}_expand",
+        )
+
 
         self._bottleneck_conv = ConvBNLayer(
             num_channels=num_expfilter,
@@ -103,7 +108,9 @@ class InvertedResidualUnit(nn.Layer):
             padding=padding,
             num_groups=num_expfilter,
             use_cudnn=False,
-            name=name + "_dwise")
+            name=f"{name}_dwise",
+        )
+
 
         self._linear_conv = ConvBNLayer(
             num_channels=num_expfilter,
@@ -112,7 +119,8 @@ class InvertedResidualUnit(nn.Layer):
             stride=1,
             padding=0,
             num_groups=1,
-            name=name + "_linear")
+            name=f"{name}_linear",
+        )
 
     def forward(self, inputs, ifshortcut):
         y = self._expand_conv(inputs, if_act=True)
@@ -135,12 +143,14 @@ class InvresiBlocks(nn.Layer):
             filter_size=3,
             padding=1,
             expansion_factor=t,
-            name=name + "_1")
+            name=f"{name}_1",
+        )
+
 
         self._block_list = []
         for i in range(1, n):
             block = self.add_sublayer(
-                name + "_" + str(i + 1),
+                f"{name}_{str(i + 1)}",
                 sublayer=InvertedResidualUnit(
                     num_channels=c,
                     num_in_filter=c,
@@ -149,7 +159,10 @@ class InvresiBlocks(nn.Layer):
                     filter_size=3,
                     padding=1,
                     expansion_factor=t,
-                    name=name + "_" + str(i + 1)))
+                    name=f"{name}_{str(i + 1)}",
+                ),
+            )
+
             self._block_list.append(block)
 
     def forward(self, inputs):
@@ -184,23 +197,26 @@ class MobileNet(nn.Layer):
             filter_size=3,
             stride=2,
             padding=1,
-            name=prefix_name + "conv1_1")
+            name=f"{prefix_name}conv1_1",
+        )
+
 
         self.block_list = []
-        i = 1
         in_c = int(32 * scale)
-        for layer_setting in bottleneck_params_list:
+        for i, layer_setting in enumerate(bottleneck_params_list, start=2):
             t, c, n, s = layer_setting
-            i += 1
             block = self.add_sublayer(
-                prefix_name + "conv" + str(i),
+                f"{prefix_name}conv{i}",
                 sublayer=InvresiBlocks(
                     in_c=in_c,
                     t=t,
                     c=int(c * scale),
                     n=n,
                     s=s,
-                    name=prefix_name + "conv" + str(i)))
+                    name=f"{prefix_name}conv{i}",
+                ),
+            )
+
             self.block_list.append(block)
             in_c = int(c * scale)
 
@@ -211,7 +227,9 @@ class MobileNet(nn.Layer):
             filter_size=1,
             stride=1,
             padding=0,
-            name=prefix_name + "conv9")
+            name=f"{prefix_name}conv9",
+        )
+
 
         self.feat_channels = [int(i * scale) for i in [16, 24, 32, 96, 1280]]
         self.pretrained = pretrained
@@ -221,12 +239,10 @@ class MobileNet(nn.Layer):
         feat_list = []
         y = self.conv1(inputs, if_act=True)
 
-        block_index = 0
-        for block in self.block_list:
+        for block_index, block in enumerate(self.block_list):
             y = block(y)
             if block_index in [0, 1, 2, 4]:
                 feat_list.append(y)
-            block_index += 1
         y = self.conv9(y, if_act=True)
         feat_list.append(y)
         return feat_list
@@ -237,5 +253,4 @@ class MobileNet(nn.Layer):
 
 @manager.BACKBONES.add_component
 def MobileNetV2(**kwargs):
-    model = MobileNet(scale=1.0, **kwargs)
-    return model
+    return MobileNet(scale=1.0, **kwargs)

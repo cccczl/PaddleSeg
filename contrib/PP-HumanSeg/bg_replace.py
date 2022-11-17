@@ -102,8 +102,10 @@ def parse_args():
 
 def background_replace(args):
     env_info = get_sys_env()
-    args.use_gpu = True if env_info['Paddle compiled with cuda'] and env_info[
-        'GPUs used'] else False
+    args.use_gpu = bool(
+        env_info['Paddle compiled with cuda'] and env_info['GPUs used']
+    )
+
     predictor = Predictor(args)
 
     if not osp.exists(args.save_dir):
@@ -112,8 +114,7 @@ def background_replace(args):
     # 图像背景替换
     if args.img_path is not None:
         if not osp.exists(args.img_path):
-            raise Exception('The --img_path is not existed: {}'.format(
-                args.img_path))
+            raise Exception(f'The --img_path is not existed: {args.img_path}')
         img = cv2.imread(args.img_path)
         bg = get_bg_img(args.bg_img_path, img.shape)
 
@@ -122,13 +123,11 @@ def background_replace(args):
         save_name = osp.basename(args.img_path)
         save_path = osp.join(args.save_dir, save_name)
         cv2.imwrite(save_path, comb)
-    # 视频背景替换
     else:
         # 获取背景：如果提供背景视频则以背景视频作为背景，否则采用提供的背景图片
         if args.bg_video_path is not None:
             if not osp.exists(args.bg_video_path):
-                raise Exception('The --bg_video_path is not existed: {}'.format(
-                    args.bg_video_path))
+                raise Exception(f'The --bg_video_path is not existed: {args.bg_video_path}')
             is_video_bg = True
         else:
             bg = get_bg_img(args.bg_img_path, args.input_shape)
@@ -138,8 +137,7 @@ def background_replace(args):
         if args.video_path is not None:
             logger.info('Please wait. It is computing......')
             if not osp.exists(args.video_path):
-                raise Exception('The --video_path is not existed: {}'.format(
-                    args.video_path))
+                raise Exception(f'The --video_path is not existed: {args.video_path}')
 
             cap_video = cv2.VideoCapture(args.video_path)
             fps = cap_video.get(cv2.CAP_PROP_FPS)
@@ -147,7 +145,7 @@ def background_replace(args):
             height = int(cap_video.get(cv2.CAP_PROP_FRAME_HEIGHT))
             save_name = osp.basename(args.video_path)
             save_name = save_name.split('.')[0]
-            save_path = osp.join(args.save_dir, save_name + '.avi')
+            save_path = osp.join(args.save_dir, f'{save_name}.avi')
 
             cap_out = cv2.VideoWriter(
                 save_path, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), fps,
@@ -160,40 +158,35 @@ def background_replace(args):
             frame_num = 0
             while cap_video.isOpened():
                 ret, frame = cap_video.read()
-                if ret:
-                    #读取背景帧
-                    if is_video_bg:
-                        ret_bg, bg = cap_bg.read()
-                        if ret_bg:
-                            if current_bg == frames_bg:
-                                current_bg = 1
-                                cap_bg.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                        else:
-                            break
-                        current_bg += 1
-
-                    comb = predictor.run(frame, bg)
-
-                    cap_out.write(comb)
-                    frame_num += 1
-                    logger.info('Processing frame {}'.format(frame_num))
-                else:
+                if not ret:
                     break
 
+                    #读取背景帧
+                if is_video_bg:
+                    ret_bg, bg = cap_bg.read()
+                    if not ret_bg:
+                        break
+                    if current_bg == frames_bg:
+                        current_bg = 1
+                        cap_bg.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    current_bg += 1
+
+                comb = predictor.run(frame, bg)
+
+                cap_out.write(comb)
+                frame_num += 1
+                logger.info(f'Processing frame {frame_num}')
             if is_video_bg:
                 cap_bg.release()
             cap_video.release()
             cap_out.release()
 
-        # 当没有输入预测图像和视频的时候，则打开摄像头
         else:
             cap_video = cv2.VideoCapture(0)
             if not cap_video.isOpened():
-                raise IOError("Error opening video stream or file, "
-                              "--video_path whether existing: {}"
-                              " or camera whether working".format(
-                                  args.video_path))
-                return
+                raise IOError(
+                    f"Error opening video stream or file, --video_path whether existing: {args.video_path} or camera whether working"
+                )
 
             if is_video_bg:
                 cap_bg = cv2.VideoCapture(args.bg_video_path)
@@ -202,24 +195,22 @@ def background_replace(args):
 
             while cap_video.isOpened():
                 ret, frame = cap_video.read()
-                if ret:
+                if not ret:
+                    break
                     #读取背景帧
-                    if is_video_bg:
-                        ret_bg, bg = cap_bg.read()
-                        if ret_bg:
-                            if current_bg == frames_bg:
-                                current_bg = 1
-                                cap_bg.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                        else:
-                            break
-                        current_bg += 1
-
-                    comb = predictor.run(frame, bg)
-
-                    cv2.imshow('HumanSegmentation', comb)
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                if is_video_bg:
+                    ret_bg, bg = cap_bg.read()
+                    if not ret_bg:
                         break
-                else:
+                    if current_bg == frames_bg:
+                        current_bg = 1
+                        cap_bg.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                    current_bg += 1
+
+                comb = predictor.run(frame, bg)
+
+                cv2.imshow('HumanSegmentation', comb)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
             if is_video_bg:
                 cap_bg.release()
@@ -227,16 +218,15 @@ def background_replace(args):
     if args.test_speed:
         timer = predictor.cost_averager
         logger.info(
-            'Model inference time per image: {}\nFPS: {}\nNum of images: {}'.
-            format(timer.get_average(), 1 / timer.get_average(), timer._cnt))
+            f'Model inference time per image: {timer.get_average()}\nFPS: {1 / timer.get_average()}\nNum of images: {timer._cnt}'
+        )
 
 
 def get_bg_img(bg_img_path, img_shape):
     if bg_img_path is None:
         bg = 255 * np.ones(img_shape)
     elif not osp.exists(bg_img_path):
-        raise Exception(
-            'The --bg_img_path is not existed: {}'.format(bg_img_path))
+        raise Exception(f'The --bg_img_path is not existed: {bg_img_path}')
     else:
         bg = cv2.imread(bg_img_path)
     return bg

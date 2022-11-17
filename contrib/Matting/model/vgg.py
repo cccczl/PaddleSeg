@@ -34,26 +34,32 @@ class ConvBlock(nn.Layer):
             kernel_size=3,
             stride=1,
             padding=1,
-            weight_attr=ParamAttr(name=name + "1_weights"),
-            bias_attr=False)
-        if groups == 2 or groups == 3 or groups == 4:
+            weight_attr=ParamAttr(name=f"{name}1_weights"),
+            bias_attr=False,
+        )
+
+        if groups in [2, 3, 4]:
             self._conv_2 = Conv2D(
                 in_channels=output_channels,
                 out_channels=output_channels,
                 kernel_size=3,
                 stride=1,
                 padding=1,
-                weight_attr=ParamAttr(name=name + "2_weights"),
-                bias_attr=False)
-        if groups == 3 or groups == 4:
+                weight_attr=ParamAttr(name=f"{name}2_weights"),
+                bias_attr=False,
+            )
+
+        if groups in [3, 4]:
             self._conv_3 = Conv2D(
                 in_channels=output_channels,
                 out_channels=output_channels,
                 kernel_size=3,
                 stride=1,
                 padding=1,
-                weight_attr=ParamAttr(name=name + "3_weights"),
-                bias_attr=False)
+                weight_attr=ParamAttr(name=f"{name}3_weights"),
+                bias_attr=False,
+            )
+
         if groups == 4:
             self._conv_4 = Conv2D(
                 in_channels=output_channels,
@@ -61,8 +67,10 @@ class ConvBlock(nn.Layer):
                 kernel_size=3,
                 stride=1,
                 padding=1,
-                weight_attr=ParamAttr(name=name + "4_weights"),
-                bias_attr=False)
+                weight_attr=ParamAttr(name=f"{name}4_weights"),
+                bias_attr=False,
+            )
+
 
         self._pool = MaxPool2D(
             kernel_size=2, stride=2, padding=0, return_mask=True)
@@ -70,10 +78,10 @@ class ConvBlock(nn.Layer):
     def forward(self, inputs):
         x = self._conv_1(inputs)
         x = F.relu(x)
-        if self.groups == 2 or self.groups == 3 or self.groups == 4:
+        if self.groups in [2, 3, 4]:
             x = self._conv_2(x)
             x = F.relu(x)
-        if self.groups == 3 or self.groups == 4:
+        if self.groups in [3, 4]:
             x = self._conv_3(x)
             x = F.relu(x)
         if self.groups == 4:
@@ -96,9 +104,10 @@ class VGGNet(nn.Layer):
             16: [2, 2, 3, 3, 3],
             19: [2, 2, 4, 4, 4]
         }
-        assert self.layers in self.vgg_configure.keys(), \
-            "supported layers are {} but input layer is {}".format(
-                self.vgg_configure.keys(), layers)
+        assert (
+            self.layers in self.vgg_configure
+        ), f"supported layers are {self.vgg_configure.keys()} but input layer is {layers}"
+
         self.groups = self.vgg_configure[self.layers]
 
         # matting的第一层卷积输入为4通道，初始化是直接初始化为0
@@ -116,11 +125,9 @@ class VGGNet(nn.Layer):
         self.init_weight()
 
     def forward(self, inputs):
-        fea_list = []
-        ids_list = []
         x, ids, skip = self._conv_block_1(inputs)
-        fea_list.append(skip)
-        ids_list.append(ids)
+        fea_list = [skip]
+        ids_list = [ids]
         x, ids, skip = self._conv_block_2(x)
         fea_list.append(skip)
         ids_list.append(ids)
@@ -144,23 +151,19 @@ class VGGNet(nn.Layer):
 
 @manager.BACKBONES.add_component
 def VGG11(**args):
-    model = VGGNet(layers=11, **args)
-    return model
+    return VGGNet(layers=11, **args)
 
 
 @manager.BACKBONES.add_component
 def VGG13(**args):
-    model = VGGNet(layers=13, **args)
-    return model
+    return VGGNet(layers=13, **args)
 
 
 @manager.BACKBONES.add_component
 def VGG16(**args):
-    model = VGGNet(layers=16, **args)
-    return model
+    return VGGNet(layers=16, **args)
 
 
 @manager.BACKBONES.add_component
 def VGG19(**args):
-    model = VGGNet(layers=19, **args)
-    return model
+    return VGGNet(layers=19, **args)

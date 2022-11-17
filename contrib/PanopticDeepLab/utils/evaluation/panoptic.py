@@ -39,9 +39,7 @@ class PQStatCat():
         return self
 
     def __repr__(self):
-        s = 'iou: ' + str(self.iou) + ' tp: ' + str(self.tp) + ' fp: ' + str(
-            self.fp) + ' fn: ' + str(self.fn)
-        return s
+        return f'iou: {str(self.iou)} tp: {str(self.tp)} fp: {str(self.fp)} fn: {str(self.fn)}'
 
 
 class PQStat():
@@ -70,13 +68,13 @@ class PQStat():
         pq, sq, rq, n = 0, 0, 0, 0
         per_class_results = {}
         for label in range(self.num_classes):
-            if isthing is not None:
-                if isthing:
-                    if label not in thing_list:
-                        continue
-                else:
-                    if label in thing_list:
-                        continue
+            if isthing is not None and (
+                isthing
+                and label not in thing_list
+                or not isthing
+                and label in thing_list
+            ):
+                continue
             iou = self.pq_per_cat[label].iou
             tp = self.pq_per_cat[label].tp
             fp = self.pq_per_cat[label].fp

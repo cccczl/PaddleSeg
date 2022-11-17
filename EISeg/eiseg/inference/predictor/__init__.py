@@ -11,17 +11,13 @@ def get_predictor(net, brs_mode,
         'optimize_after_n_clicks': 1
     }
 
-    if zoom_in_params is not None:
-        zoom_in = ZoomIn(**zoom_in_params)
-    else:
-        zoom_in = None
-
+    zoom_in = ZoomIn(**zoom_in_params) if zoom_in_params is not None else None
     if brs_mode == 'NoBRS':
         
         if predictor_params is not None:
-            predictor_params_.update(predictor_params)
+            predictor_params_ |= predictor_params
         predictor = BasePredictor(net, zoom_in=zoom_in, with_flip=with_flip, **predictor_params_)
-   
+
     else:
         raise NotImplementedError('Just support NoBRS mode')
     return predictor

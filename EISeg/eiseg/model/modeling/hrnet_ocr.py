@@ -30,25 +30,24 @@ class HighResolutionModule(nn.Layer):
 
     def _check_branches(self, num_branches, num_blocks, num_inchannels, num_channels):
         if num_branches != len(num_blocks):
-            error_msg = 'NUM_BRANCHES({}) <> NUM_BLOCKS({})'.format(
-                num_branches, len(num_blocks))
+            error_msg = f'NUM_BRANCHES({num_branches}) <> NUM_BLOCKS({len(num_blocks)})'
             raise ValueError(error_msg)
 
         if num_branches != len(num_channels):
-            error_msg = 'NUM_BRANCHES({}) <> NUM_CHANNELS({})'.format(
-                num_branches, len(num_channels))
+            error_msg = f'NUM_BRANCHES({num_branches}) <> NUM_CHANNELS({len(num_channels)})'
+
             raise ValueError(error_msg)
 
         if num_branches != len(num_inchannels):
-            error_msg = 'NUM_BRANCHES({}) <> NUM_INCHANNELS({})'.format(
-                num_branches, len(num_inchannels))
+            error_msg = f'NUM_BRANCHES({num_branches}) <> NUM_INCHANNELS({len(num_inchannels)})'
+
             raise ValueError(error_msg)
 
     def _make_one_branch(self, branch_index, block, num_blocks, num_channels,
                          stride=1):
         downsample = None
         if stride != 1 or \
-                self.num_inchannels[branch_index] != num_channels[branch_index] * block.expansion:
+                    self.num_inchannels[branch_index] != num_channels[branch_index] * block.expansion:
             downsample = nn.Sequential(
                 nn.Conv2D(self.num_inchannels[branch_index],
                           num_channels[branch_index] * block.expansion,
@@ -56,25 +55,35 @@ class HighResolutionModule(nn.Layer):
                 self.norm_layer(num_channels[branch_index] * block.expansion),
             )
 
-        layers = []
-        layers.append(block(self.num_inchannels[branch_index],
-                            num_channels[branch_index], stride,
-                            downsample=downsample, norm_layer=self.norm_layer))
+        layers = [
+            block(
+                self.num_inchannels[branch_index],
+                num_channels[branch_index],
+                stride,
+                downsample=downsample,
+                norm_layer=self.norm_layer,
+            )
+        ]
+
         self.num_inchannels[branch_index] = \
-            num_channels[branch_index] * block.expansion
-        for i in range(1, num_blocks[branch_index]):
-            layers.append(block(self.num_inchannels[branch_index],
-                                num_channels[branch_index],
-                                norm_layer=self.norm_layer))
+                num_channels[branch_index] * block.expansion
+        layers.extend(
+            block(
+                self.num_inchannels[branch_index],
+                num_channels[branch_index],
+                norm_layer=self.norm_layer,
+            )
+            for _ in range(1, num_blocks[branch_index])
+        )
 
         return nn.Sequential(*layers)
 
     def _make_branches(self, num_branches, block, num_blocks, num_channels):
-        branches = []
+        branches = [
+            self._make_one_branch(i, block, num_blocks, num_channels)
+            for i in range(num_branches)
+        ]
 
-        for i in range(num_branches):
-            branches.append(
-                self._make_one_branch(i, block, num_blocks, num_channels))
 
         return nn.LayerList(branches)
 
@@ -109,12 +118,21 @@ class HighResolutionModule(nn.Layer):
                                 self.norm_layer(num_outchannels_conv3x3)))
                         else:
                             num_outchannels_conv3x3 = num_inchannels[j]
-                            conv3x3s.append(nn.Sequential(
-                                nn.Conv2D(num_inchannels[j],
-                                          num_outchannels_conv3x3,
-                                          kernel_size=3, stride=2, padding=1, bias_attr=False),
-                                self.norm_layer(num_outchannels_conv3x3),
-                                nn.ReLU()))
+                            conv3x3s.append(
+                                nn.Sequential(
+                                    nn.Conv2D(
+                                        num_outchannels_conv3x3,
+                                        num_outchannels_conv3x3,
+                                        kernel_size=3,
+                                        stride=2,
+                                        padding=1,
+                                        bias_attr=False,
+                                    ),
+                                    self.norm_layer(num_outchannels_conv3x3),
+                                    nn.ReLU(),
+                                )
+                            )
+
                     fuse_layer.append(nn.Sequential(*conv3x3s))
             fuse_layers.append(nn.LayerList(fuse_layer))
 
@@ -269,7 +287,7 @@ class HighResolutionNet(nn.Layer):
                 for j in range(i + 1 - num_branches_pre):
                     inchannels = num_channels_pre_layer[-1]
                     outchannels = num_channels_cur_layer[i] \
-                        if j == i - num_branches_pre else inchannels
+                            if j == i - num_branches_pre else inchannels
                     conv3x3s.append(nn.Sequential(
                         nn.Conv2D(inchannels, outchannels,
                                   kernel_size=3, stride=2, padding=1, bias_attr=False),
@@ -288,12 +306,21 @@ class HighResolutionNet(nn.Layer):
                 self.norm_layer(planes * block.expansion),
             )
 
-        layers = []
-        layers.append(block(inplanes, planes, stride,
-                            downsample=downsample, norm_layer=self.norm_layer))
+        layers = [
+            block(
+                inplanes,
+                planes,
+                stride,
+                downsample=downsample,
+                norm_layer=self.norm_layer,
+            )
+        ]
+
         inplanes = planes * block.expansion
-        for i in range(1, blocks):
-            layers.append(block(inplanes, planes, norm_layer=self.norm_layer))
+        layers.extend(
+            block(inplanes, planes, norm_layer=self.norm_layer)
+            for _ in range(1, blocks)
+        )
 
         return nn.Sequential(*layers)
 
@@ -304,10 +331,7 @@ class HighResolutionNet(nn.Layer):
         modules = []
         for i in range(num_modules):
             # multi_scale_output is only used last module
-            if not multi_scale_output and i == num_modules - 1:
-                reset_multi_scale_output = False
-            else:
-                reset_multi_scale_output = True
+            reset_multi_scale_output = bool(multi_scale_output or i != num_modules - 1)
             modules.append(
                 HighResolutionModule(num_branches,
                                      block,
@@ -325,15 +349,14 @@ class HighResolutionNet(nn.Layer):
 
     def forward(self, x, additional_features=None):
         feats = self.compute_hrnet_feats(x, additional_features)
-        if self.ocr_width > 0:
-            out_aux = self.aux_head(feats)
-            feats = self.conv3x3_ocr(feats)
-            context = self.ocr_gather_head(feats, out_aux)
-            feats = self.ocr_distri_head(feats, context)
-            out = self.cls_head(feats)
-            return [out, out_aux]
-        else:
+        if self.ocr_width <= 0:
             return [self.cls_head(feats), None]
+        out_aux = self.aux_head(feats)
+        feats = self.conv3x3_ocr(feats)
+        context = self.ocr_gather_head(feats, out_aux)
+        feats = self.ocr_distri_head(feats, context)
+        out = self.cls_head(feats)
+        return [out, out_aux]
 
     def compute_hrnet_feats(self, x, additional_features):
         x = self.compute_pre_stage_features(x, additional_features)
@@ -347,23 +370,21 @@ class HighResolutionNet(nn.Layer):
         y_list = self.stage2(x_list)
         x_list = []
         for i in range(self.stage3_num_branches):
-            if self.transition2[i] is not None:
-                if i < self.stage2_num_branches:
-                    x_list.append(self.transition2[i](y_list[i]))
-                else:
-                    x_list.append(self.transition2[i](y_list[-1]))
-            else:
+            if self.transition2[i] is None:
                 x_list.append(y_list[i])
+            elif i < self.stage2_num_branches:
+                x_list.append(self.transition2[i](y_list[i]))
+            else:
+                x_list.append(self.transition2[i](y_list[-1]))
         y_list = self.stage3(x_list)
         x_list = []
         for i in range(self.stage4_num_branches):
-            if self.transition3[i] is not None:
-                if i < self.stage3_num_branches:
-                    x_list.append(self.transition3[i](y_list[i]))
-                else:
-                    x_list.append(self.transition3[i](y_list[-1]))
-            else:
+            if self.transition3[i] is None:
                 x_list.append(y_list[i])
+            elif i < self.stage3_num_branches:
+                x_list.append(self.transition3[i](y_list[i]))
+            else:
+                x_list.append(self.transition3[i](y_list[-1]))
         x = self.stage4(x_list)
         return self.aggregate_hrnet_features(x)
 

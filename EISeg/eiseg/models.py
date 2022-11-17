@@ -23,8 +23,7 @@ class EISegModel:
                 raise Exception("模型创建失败。请参考官网教程检查Paddle安装是否正确，GPU版本请注意是否正确安装显卡驱动。")
 
     def load_param(self, param_path):
-        params = self.get_param(param_path)
-        if params:
+        if params := self.get_param(param_path):
             try:
                 self.model.set_dict(params)
                 self.model.eval()

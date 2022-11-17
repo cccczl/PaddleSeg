@@ -86,7 +86,7 @@ def reverse_transform(pred, ori_shape, transforms):
             h, w = item[1][0], item[1][1]
             pred = pred[:, :, 0:h, 0:w]
         else:
-            raise Exception("Unexpected info '{}' in im_info".format(item[0]))
+            raise Exception(f"Unexpected info '{item[0]}' in im_info")
     return pred
 
 
@@ -124,11 +124,7 @@ def find_instance_center(ctr_hmp, threshold=0.1, nms_kernel=3, top_k=None):
         top_k_score = top_k_score[-1]
     # non-zero points are candidate centers
     ctr_hmp_k = (ctr_hmp > top_k_score[-1]).astype('int64')
-    if ctr_hmp_k.sum() == 0:
-        ctr_all = None
-    else:
-        ctr_all = paddle.nonzero(ctr_hmp_k)
-    return ctr_all
+    return None if ctr_hmp_k.sum() == 0 else paddle.nonzero(ctr_hmp_k)
 
 
 def group_pixels(ctr, offsets):
@@ -161,11 +157,7 @@ def group_pixels(ctr, offsets):
     # distance: [K, H*W]
     distance = paddle.norm((ctr - ctr_loc).astype('float32'), axis=-1)
 
-    # finds center with minimum distance at each location, offset by 1, to reserve id=0 for stuff
-    instance_id = paddle.argmin(
-        distance, axis=0).reshape((1, height, width)) + 1
-
-    return instance_id
+    return paddle.argmin(distance, axis=0).reshape((1, height, width)) + 1
 
 
 def get_instance_segmentation(semantic,

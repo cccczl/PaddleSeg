@@ -247,7 +247,7 @@ class PointHead(nn.Layer):
         fc_in_channels = sum(self.in_channels) + self.num_classes
         fc_channels = self.channels
         self.fcs = nn.LayerList()
-        for k in range(num_fcs):
+        for _ in range(num_fcs):
             fc = ConvModule(
                 fc_in_channels,
                 fc_channels,
@@ -275,8 +275,7 @@ class PointHead(nn.Layer):
         """Classify each pixel with fc."""
         if self.dropout is not None:
             feat = self.dropout(feat)
-        output = self.fc_seg(feat)
-        return output
+        return self.fc_seg(feat)
 
     def _get_fine_grained_point_feats(self, x, points):
         """
@@ -294,11 +293,11 @@ class PointHead(nn.Layer):
         fine_grained_feats_list = [
             point_sample(_, points, align_corners=self.align_corners) for _ in x
         ]
-        if len(fine_grained_feats_list) > 1:
-            fine_grained_feats = paddle.concat(fine_grained_feats_list, axis=1)
-        else:
-            fine_grained_feats = fine_grained_feats_list[0]
-        return fine_grained_feats
+        return (
+            paddle.concat(fine_grained_feats_list, axis=1)
+            if len(fine_grained_feats_list) > 1
+            else fine_grained_feats_list[0]
+        )
 
     def _get_coarse_point_feats(self, prev_output, points):
         """
@@ -313,9 +312,7 @@ class PointHead(nn.Layer):
                 num_classes, num_points).
         """
 
-        coarse_feats = point_sample(
-            prev_output, points, align_corners=self.align_corners)
-        return coarse_feats
+        return point_sample(prev_output, points, align_corners=self.align_corners)
 
     def _transform_inputs(self, inputs):
         """
@@ -497,40 +494,39 @@ class PointHead(nn.Layer):
         x = self._transform_inputs(inputs)
         if self.training:
             return self.forward_train(x, prev_output)
-        else:
-            refined_seg_logits = prev_output.clone()
-            for _ in range(self.subdivision_steps):
-                refined_seg_logits = F.interpolate(
-                    refined_seg_logits,
-                    scale_factor=self.scale_factor,
-                    mode='bilinear',
-                    align_corners=self.align_corners)
+        refined_seg_logits = prev_output.clone()
+        for _ in range(self.subdivision_steps):
+            refined_seg_logits = F.interpolate(
+                refined_seg_logits,
+                scale_factor=self.scale_factor,
+                mode='bilinear',
+                align_corners=self.align_corners)
 
-                save_shape = paddle.shape(refined_seg_logits)
-                point_indices, points = self.get_points_test(
-                    refined_seg_logits, calculate_uncertainty)
-                fine_grained_point_feats = self._get_fine_grained_point_feats(
-                    x, points)
-                coarse_point_feats = self._get_coarse_point_feats(
-                    prev_output, points)
-                # forward for inference
-                fusion_point_feats = paddle.concat(
-                    [fine_grained_point_feats, coarse_point_feats], axis=1)
-                for fc in self.fcs:
-                    fusion_point_feats = fc(fusion_point_feats)
-                    if self.coarse_pred_each_layer:
-                        fusion_point_feats = paddle.concat(
-                            (fusion_point_feats, coarse_point_feats), axis=1)
-                point_logits = self.cls_seg(fusion_point_feats)
-                point_indices = paddle.unsqueeze(point_indices, axis=1)
-                point_indices = paddle.expand(point_indices, [-1, save_shape[1], -1])
+            save_shape = paddle.shape(refined_seg_logits)
+            point_indices, points = self.get_points_test(
+                refined_seg_logits, calculate_uncertainty)
+            fine_grained_point_feats = self._get_fine_grained_point_feats(
+                x, points)
+            coarse_point_feats = self._get_coarse_point_feats(
+                prev_output, points)
+            # forward for inference
+            fusion_point_feats = paddle.concat(
+                [fine_grained_point_feats, coarse_point_feats], axis=1)
+            for fc in self.fcs:
+                fusion_point_feats = fc(fusion_point_feats)
+                if self.coarse_pred_each_layer:
+                    fusion_point_feats = paddle.concat(
+                        (fusion_point_feats, coarse_point_feats), axis=1)
+            point_logits = self.cls_seg(fusion_point_feats)
+            point_indices = paddle.unsqueeze(point_indices, axis=1)
+            point_indices = paddle.expand(point_indices, [-1, save_shape[1], -1])
 
-                refined_seg_logits = paddle.flatten(refined_seg_logits, 2)
-                refined_seg_logits = self.scatter_paddle(
-                    refined_seg_logits, point_indices,
-                    point_logits)  # 2->height * width dim
-                refined_seg_logits = refined_seg_logits.reshape(save_shape)
-            return [refined_seg_logits]
+            refined_seg_logits = paddle.flatten(refined_seg_logits, 2)
+            refined_seg_logits = self.scatter_paddle(
+                refined_seg_logits, point_indices,
+                point_logits)  # 2->height * width dim
+            refined_seg_logits = refined_seg_logits.reshape(save_shape)
+        return [refined_seg_logits]
 
 
 class FPNHead(nn.Layer):
@@ -612,8 +608,7 @@ class FPNHead(nn.Layer):
     def cls_seg(self, feat):
         if self.dropout is not None:
             feat = self.dropout(feat)
-        output = self.conv_seg(feat)
-        return output
+        return self.conv_seg(feat)
 
     def _transform_inputs(self, inputs):
         """
@@ -732,10 +727,7 @@ class ConvModule(nn.Layer):
                 stride=stride,
                 padding=padding,
                 **kwargs)
-        if 'data_format' in kwargs:
-            data_format = kwargs['data_format']
-        else:
-            data_format = 'NCHW'
+        data_format = kwargs.get('data_format', 'NCHW')
         if (norm_cfg != 'None'):
             self._batch_norm = layers.SyncBatchNorm(
                 out_channels, data_format=data_format)
@@ -770,10 +762,13 @@ class Upsample(nn.Layer):
         self.align_corners = align_corners
 
     def forward(self, x):
-        if not self.size:
-            return F.interpolate(x, None, self.scale_factor, self.mode, self.align_corners)
-        else:
-            return F.interpolate(x, self.size, None, self.mode, self.align_corners)
+        return (
+            F.interpolate(x, self.size, None, self.mode, self.align_corners)
+            if self.size
+            else F.interpolate(
+                x, None, self.scale_factor, self.mode, self.align_corners
+            )
+        )
 
 
 def point_sample(input, points, align_corners=False, **kwargs):

@@ -176,11 +176,12 @@ class Predictor:
         self.imgs_dir = imgs_dir
         num = len(imgs)
         input_names = self.predictor.get_input_names()
-        input_handle = {}
+        input_handle = {
+            input_names[i]: self.predictor.get_input_handle(input_names[i])
+            for i in range(len(input_names))
+        }
 
-        for i in range(len(input_names)):
-            input_handle[input_names[i]] = self.predictor.get_input_handle(
-                input_names[i])
+
         output_names = self.predictor.get_output_names()
         output_handle = self.predictor.get_output_handle(output_names[0])
         args = self.args
@@ -190,7 +191,7 @@ class Predictor:
             if trimaps is not None:
                 trimap_inputs = []
             trans_info = []
-            for j in range(i, i + args.batch_size):
+            for _ in range(i, i + args.batch_size):
                 img = imgs[i]
                 trimap = trimaps[i] if trimaps is not None else None
                 data = self._preprocess(img=img, trimap=trimap)
@@ -217,8 +218,7 @@ class Predictor:
         logger.info("Finish")
 
     def _preprocess(self, img, trimap=None):
-        data = {}
-        data['img'] = img
+        data = {'img': img}
         if trimap is not None:
             data['trimap'] = trimap
             data['gt_fields'] = ['trimap']
@@ -240,8 +240,7 @@ class Predictor:
                 h, w = item[1][0], item[1][1]
                 alpha = alpha[:, :, 0:h, 0:w]
             else:
-                raise Exception("Unexpected info '{}' in im_info".format(
-                    item[0]))
+                raise Exception(f"Unexpected info '{item[0]}' in im_info")
         return alpha
 
     def _save_imgs(self, alpha, img_path):
@@ -253,8 +252,8 @@ class Predictor:
         name, ext = os.path.splitext(img_path)
         if name[0] == '/':
             name = name[1:]
-        alpha_save_path = os.path.join(args.save_dir, 'alpha/', name + '.png')
-        clip_save_path = os.path.join(args.save_dir, 'clip/', name + '.png')
+        alpha_save_path = os.path.join(args.save_dir, 'alpha/', f'{name}.png')
+        clip_save_path = os.path.join(args.save_dir, 'clip/', f'{name}.png')
 
         # save alpha
         mkdir(alpha_save_path)

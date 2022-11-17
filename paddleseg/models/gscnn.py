@@ -220,8 +220,7 @@ class GSCNNHead(nn.Layer):
 
         low_level_feat = feat_list[self.backbone_indices[0]]
         logit = self.decoder(x, low_level_feat)
-        logit_list = [logit, edge_out]
-        return logit_list
+        return [logit, edge_out]
 
 
 class GatedSpatailConv2d(nn.Layer):

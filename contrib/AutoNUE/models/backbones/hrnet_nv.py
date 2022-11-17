@@ -212,14 +212,17 @@ class Layer1(nn.Layer):
 
         for i in range(num_blocks):
             bottleneck_block = self.add_sublayer(
-                "bb_{}_{}".format(name, i + 1),
+                f"bb_{name}_{i + 1}",
                 BottleneckBlock(
                     num_channels=num_channels if i == 0 else num_filters * 4,
                     num_filters=num_filters,
                     has_se=has_se,
                     stride=1,
-                    downsample=True if i == 0 else False,
-                    name=name + '_' + str(i + 1)))
+                    downsample=i == 0,
+                    name=f'{name}_{str(i + 1)}',
+                ),
+            )
+
             self.bottleneck_block_list.append(bottleneck_block)
 
     def forward(self, x):
@@ -241,23 +244,29 @@ class TransitionLayer(nn.Layer):
             if i < num_in:
                 if in_channels[i] != out_channels[i]:
                     residual = self.add_sublayer(
-                        "transition_{}_layer_{}".format(name, i + 1),
+                        f"transition_{name}_layer_{i + 1}",
                         layers.ConvBNReLU(
                             in_channels=in_channels[i],
                             out_channels=out_channels[i],
                             kernel_size=3,
                             padding=1,
-                            bias_attr=False))
+                            bias_attr=False,
+                        ),
+                    )
+
             else:
                 residual = self.add_sublayer(
-                    "transition_{}_layer_{}".format(name, i + 1),
+                    f"transition_{name}_layer_{i + 1}",
                     layers.ConvBNReLU(
                         in_channels=in_channels[-1],
                         out_channels=out_channels[i],
                         kernel_size=3,
                         stride=2,
                         padding=1,
-                        bias_attr=False))
+                        bias_attr=False,
+                    ),
+                )
+
             self.conv_bn_func_list.append(residual)
 
     def forward(self, x):
@@ -265,11 +274,10 @@ class TransitionLayer(nn.Layer):
         for idx, conv_bn_func in enumerate(self.conv_bn_func_list):
             if conv_bn_func is None:
                 outs.append(x[idx])
+            elif idx < len(x):
+                outs.append(conv_bn_func(x[idx]))
             else:
-                if idx < len(x):
-                    outs.append(conv_bn_func(x[idx]))
-                else:
-                    outs.append(conv_bn_func(x[-1]))
+                outs.append(conv_bn_func(x[-1]))
         return outs
 
 
@@ -289,13 +297,15 @@ class Branches(nn.Layer):
             for j in range(num_blocks[i]):
                 in_ch = in_channels[i] if j == 0 else out_channels[i]
                 basic_block_func = self.add_sublayer(
-                    "bb_{}_branch_layer_{}_{}".format(name, i + 1, j + 1),
+                    f"bb_{name}_branch_layer_{i + 1}_{j + 1}",
                     BasicBlock(
                         num_channels=in_ch,
                         num_filters=out_channels[i],
                         has_se=has_se,
-                        name=name + '_branch_layer_' + str(i + 1) + '_' +
-                        str(j + 1)))
+                        name=f'{name}_branch_layer_{str(i + 1)}_{str(j + 1)}',
+                    ),
+                )
+
                 self.basic_block_list[i].append(basic_block_func)
 
     def forward(self, x):
@@ -355,7 +365,8 @@ class BottleneckBlock(nn.Layer):
                 num_channels=num_filters * 4,
                 num_filters=num_filters * 4,
                 reduction_ratio=16,
-                name=name + '_fc')
+                name=f'{name}_fc',
+            )
 
     def forward(self, x):
         residual = x
@@ -414,7 +425,8 @@ class BasicBlock(nn.Layer):
                 num_channels=num_filters,
                 num_filters=num_filters,
                 reduction_ratio=16,
-                name=name + '_fc')
+                name=f'{name}_fc',
+            )
 
     def forward(self, x):
         residual = x
@@ -464,8 +476,7 @@ class SELayer(nn.Layer):
         excitation = F.sigmoid(excitation)
         excitation = paddle.reshape(
             excitation, shape=[-1, self._num_channels, 1, 1])
-        out = x * excitation
-        return out
+        return x * excitation
 
 
 class Stage(nn.Layer):
@@ -486,25 +497,31 @@ class Stage(nn.Layer):
         for i in range(num_modules):
             if i == num_modules - 1 and not multi_scale_output:
                 stage_func = self.add_sublayer(
-                    "stage_{}_{}".format(name, i + 1),
+                    f"stage_{name}_{i + 1}",
                     HighResolutionModule(
                         num_channels=num_channels,
                         num_blocks=num_blocks,
                         num_filters=num_filters,
                         has_se=has_se,
                         multi_scale_output=False,
-                        name=name + '_' + str(i + 1),
-                        align_corners=align_corners))
+                        name=f'{name}_{str(i + 1)}',
+                        align_corners=align_corners,
+                    ),
+                )
+
             else:
                 stage_func = self.add_sublayer(
-                    "stage_{}_{}".format(name, i + 1),
+                    f"stage_{name}_{i + 1}",
                     HighResolutionModule(
                         num_channels=num_channels,
                         num_blocks=num_blocks,
                         num_filters=num_filters,
                         has_se=has_se,
-                        name=name + '_' + str(i + 1),
-                        align_corners=align_corners))
+                        name=f'{name}_{str(i + 1)}',
+                        align_corners=align_corners,
+                    ),
+                )
+
 
             self.stage_func_list.append(stage_func)
 
@@ -564,40 +581,47 @@ class FuseLayers(nn.Layer):
             for j in range(len(in_channels)):
                 if j > i:
                     residual_func = self.add_sublayer(
-                        "residual_{}_layer_{}_{}".format(name, i + 1, j + 1),
+                        f"residual_{name}_layer_{i + 1}_{j + 1}",
                         layers.ConvBN(
                             in_channels=in_channels[j],
                             out_channels=out_channels[i],
                             kernel_size=1,
                             padding=0,
-                            bias_attr=False))
+                            bias_attr=False,
+                        ),
+                    )
+
                     self.residual_func_list.append(residual_func)
                 elif j < i:
                     pre_num_filters = in_channels[j]
                     for k in range(i - j):
                         if k == i - j - 1:
                             residual_func = self.add_sublayer(
-                                "residual_{}_layer_{}_{}_{}".format(
-                                    name, i + 1, j + 1, k + 1),
+                                f"residual_{name}_layer_{i + 1}_{j + 1}_{k + 1}",
                                 layers.ConvBN(
                                     in_channels=pre_num_filters,
                                     out_channels=out_channels[i],
                                     kernel_size=3,
                                     stride=2,
                                     padding=1,
-                                    bias_attr=False))
+                                    bias_attr=False,
+                                ),
+                            )
+
                             pre_num_filters = out_channels[i]
                         else:
                             residual_func = self.add_sublayer(
-                                "residual_{}_layer_{}_{}_{}".format(
-                                    name, i + 1, j + 1, k + 1),
+                                f"residual_{name}_layer_{i + 1}_{j + 1}_{k + 1}",
                                 layers.ConvBNReLU(
                                     in_channels=pre_num_filters,
                                     out_channels=out_channels[j],
                                     kernel_size=3,
                                     stride=2,
                                     padding=1,
-                                    bias_attr=False))
+                                    bias_attr=False,
+                                ),
+                            )
+
                             pre_num_filters = out_channels[j]
                         self.residual_func_list.append(residual_func)
 
@@ -620,7 +644,7 @@ class FuseLayers(nn.Layer):
                     residual = residual + y
                 elif j < i:
                     y = x[j]
-                    for k in range(i - j):
+                    for _ in range(i - j):
                         y = self.residual_func_list[residual_func_idx](y)
                         residual_func_idx += 1
 
@@ -634,7 +658,7 @@ class FuseLayers(nn.Layer):
 
 @manager.BACKBONES.add_component
 def HRNet_W18_NV_Small_V1(**kwargs):
-    model = HRNetNV(
+    return HRNetNV(
         stage1_num_modules=1,
         stage1_num_blocks=[1],
         stage1_num_channels=[32],
@@ -647,13 +671,13 @@ def HRNet_W18_NV_Small_V1(**kwargs):
         stage4_num_modules=1,
         stage4_num_blocks=[2, 2, 2, 2],
         stage4_num_channels=[16, 32, 64, 128],
-        **kwargs)
-    return model
+        **kwargs
+    )
 
 
 @manager.BACKBONES.add_component
 def HRNet_W18_NV_Small_V2(**kwargs):
-    model = HRNetNV(
+    return HRNetNV(
         stage1_num_modules=1,
         stage1_num_blocks=[2],
         stage1_num_channels=[64],
@@ -666,13 +690,13 @@ def HRNet_W18_NV_Small_V2(**kwargs):
         stage4_num_modules=2,
         stage4_num_blocks=[2, 2, 2, 2],
         stage4_num_channels=[18, 36, 72, 144],
-        **kwargs)
-    return model
+        **kwargs
+    )
 
 
 @manager.BACKBONES.add_component
 def HRNet_W18_NV(**kwargs):
-    model = HRNetNV(
+    return HRNetNV(
         stage1_num_modules=1,
         stage1_num_blocks=[4],
         stage1_num_channels=[64],
@@ -685,13 +709,13 @@ def HRNet_W18_NV(**kwargs):
         stage4_num_modules=3,
         stage4_num_blocks=[4, 4, 4, 4],
         stage4_num_channels=[18, 36, 72, 144],
-        **kwargs)
-    return model
+        **kwargs
+    )
 
 
 @manager.BACKBONES.add_component
 def HRNet_W30_NV(**kwargs):
-    model = HRNetNV(
+    return HRNetNV(
         stage1_num_modules=1,
         stage1_num_blocks=[4],
         stage1_num_channels=[64],
@@ -704,13 +728,13 @@ def HRNet_W30_NV(**kwargs):
         stage4_num_modules=3,
         stage4_num_blocks=[4, 4, 4, 4],
         stage4_num_channels=[30, 60, 120, 240],
-        **kwargs)
-    return model
+        **kwargs
+    )
 
 
 @manager.BACKBONES.add_component
 def HRNet_W32_NV(**kwargs):
-    model = HRNetNV(
+    return HRNetNV(
         stage1_num_modules=1,
         stage1_num_blocks=[4],
         stage1_num_channels=[64],
@@ -723,13 +747,13 @@ def HRNet_W32_NV(**kwargs):
         stage4_num_modules=3,
         stage4_num_blocks=[4, 4, 4, 4],
         stage4_num_channels=[32, 64, 128, 256],
-        **kwargs)
-    return model
+        **kwargs
+    )
 
 
 @manager.BACKBONES.add_component
 def HRNet_W40_NV(**kwargs):
-    model = HRNetNV(
+    return HRNetNV(
         stage1_num_modules=1,
         stage1_num_blocks=[4],
         stage1_num_channels=[64],
@@ -742,13 +766,13 @@ def HRNet_W40_NV(**kwargs):
         stage4_num_modules=3,
         stage4_num_blocks=[4, 4, 4, 4],
         stage4_num_channels=[40, 80, 160, 320],
-        **kwargs)
-    return model
+        **kwargs
+    )
 
 
 @manager.BACKBONES.add_component
 def HRNet_W44_NV(**kwargs):
-    model = HRNetNV(
+    return HRNetNV(
         stage1_num_modules=1,
         stage1_num_blocks=[4],
         stage1_num_channels=[64],
@@ -761,13 +785,13 @@ def HRNet_W44_NV(**kwargs):
         stage4_num_modules=3,
         stage4_num_blocks=[4, 4, 4, 4],
         stage4_num_channels=[44, 88, 176, 352],
-        **kwargs)
-    return model
+        **kwargs
+    )
 
 
 @manager.BACKBONES.add_component
 def HRNet_W48_NV(**kwargs):
-    model = HRNetNV(
+    return HRNetNV(
         stage1_num_modules=1,
         stage1_num_blocks=[4],
         stage1_num_channels=[64],
@@ -780,13 +804,13 @@ def HRNet_W48_NV(**kwargs):
         stage4_num_modules=3,
         stage4_num_blocks=[4, 4, 4, 4],
         stage4_num_channels=[48, 96, 192, 384],
-        **kwargs)
-    return model
+        **kwargs
+    )
 
 
 @manager.BACKBONES.add_component
 def HRNet_W60_NV(**kwargs):
-    model = HRNetNV(
+    return HRNetNV(
         stage1_num_modules=1,
         stage1_num_blocks=[4],
         stage1_num_channels=[64],
@@ -799,13 +823,13 @@ def HRNet_W60_NV(**kwargs):
         stage4_num_modules=3,
         stage4_num_blocks=[4, 4, 4, 4],
         stage4_num_channels=[60, 120, 240, 480],
-        **kwargs)
-    return model
+        **kwargs
+    )
 
 
 @manager.BACKBONES.add_component
 def HRNet_W64_NV(**kwargs):
-    model = HRNetNV(
+    return HRNetNV(
         stage1_num_modules=1,
         stage1_num_blocks=[4],
         stage1_num_channels=[64],
@@ -818,5 +842,5 @@ def HRNet_W64_NV(**kwargs):
         stage4_num_modules=3,
         stage4_num_blocks=[4, 4, 4, 4],
         stage4_num_channels=[64, 128, 256, 512],
-        **kwargs)
-    return model
+        **kwargs
+    )

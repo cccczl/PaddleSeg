@@ -154,11 +154,10 @@ class PolygonAnnotation(QtWidgets.QGraphicsPolygonItem):
         del self
 
     def removeFocusPoint(self):
-        focusIdx = None
-        for idx, item in enumerate(self.m_items):
-            if item.hasFocus():
-                focusIdx = idx
-                break
+        focusIdx = next(
+            (idx for idx, item in enumerate(self.m_items) if item.hasFocus()), None
+        )
+
         if focusIdx is not None:
             if len(self) <= 3:
                 self.delPolygon(self)  # 调用app的删除多边形，为了同时删除coco标签

@@ -148,15 +148,14 @@ def main(args):
             'The verification dataset is not specified in the configuration file.'
         )
 
-    msg = '\n---------------Config Information---------------\n'
-    msg += str(cfg)
+    msg = '\n---------------Config Information---------------\n' + str(cfg)
     msg += '------------------------------------------------'
     logger.info(msg)
 
     model = cfg.model
     transforms = val_dataset.transforms
     image_list, image_dir = get_image_list(args.image_path)
-    logger.info('Number of predict images = {}'.format(len(image_list)))
+    logger.info(f'Number of predict images = {len(image_list)}')
 
     test_config = get_test_config(cfg, args)
     config_check(cfg, val_dataset=val_dataset)

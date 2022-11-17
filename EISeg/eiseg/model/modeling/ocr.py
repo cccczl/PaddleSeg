@@ -21,8 +21,7 @@ class SpatialGather_Module(nn.Layer):
         feats = feats.reshape([b, feats.shape[1], -1])
         feats = feats.transpose([0, 2, 1])
         probs = F.softmax(self.scale * probs, axis=2)
-        ocr_context = paddle.unsqueeze(paddle.matmul(probs, feats).transpose([0, 2, 1]), 3)
-        return ocr_context
+        return paddle.unsqueeze(paddle.matmul(probs, feats).transpose([0, 2, 1]), 3)
 
 
 class SpatialOCR_Module(nn.Layer):
@@ -53,8 +52,7 @@ class SpatialOCR_Module(nn.Layer):
     def forward(self, feats, proxy_feats):
         context = self.object_context_block(feats, proxy_feats)
 
-        output = self.conv_bn_dropout(paddle.concat([context, feats], 1))
-        return output
+        return self.conv_bn_dropout(paddle.concat([context, feats], 1))
 
 
 class ObjectAttentionBlock2D(nn.Layer):

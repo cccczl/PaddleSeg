@@ -29,8 +29,8 @@ def check_logits_losses(logits_list, losses):
     len_losses = len(losses['types'])
     if len_logits != len_losses:
         raise RuntimeError(
-            'The length of logits_list should equal to the types of loss config: {} != {}.'
-            .format(len_logits, len_losses))
+            f'The length of logits_list should equal to the types of loss config: {len_logits} != {len_losses}.'
+        )
 
 
 def loss_computation(logits_list, semantic, semantic_weights, center,
@@ -60,9 +60,7 @@ def loss_computation(logits_list, semantic, semantic_weights, center,
         offset_loss = offset_loss.sum() * 0
     offset_loss = offset_loss * losses['coef'][2]
 
-    loss_list = [semantic_loss, center_loss, offset_loss]
-
-    return loss_list
+    return [semantic_loss, center_loss, offset_loss]
 
 
 def train(model,
@@ -167,11 +165,7 @@ def train(model,
             offset_weights = data[6]
             foreground = data[7]
 
-            if nranks > 1:
-                logits_list = ddp_model(images)
-            else:
-                logits_list = model(images)
-
+            logits_list = ddp_model(images) if nranks > 1 else model(images)
             loss_list = loss_computation(
                 logits_list=logits_list,
                 losses=losses,
@@ -222,9 +216,9 @@ def train(model,
                     if len(avg_loss_list) > 1:
                         avg_loss_dict = {}
                         for i, value in enumerate(avg_loss_list):
-                            avg_loss_dict['loss_' + str(i)] = value
+                            avg_loss_dict[f'loss_{str(i)}'] = value
                         for key, value in avg_loss_dict.items():
-                            log_tag = 'Train/' + key
+                            log_tag = f'Train/{key}'
                             log_writer.add_scalar(log_tag, value, iter)
 
                     log_writer.add_scalar('Train/lr', lr, iter)
@@ -276,24 +270,28 @@ def train(model,
                 model.train()
 
             # save best model and add evaluate results to vdl
-            if (iter % save_interval == 0 or iter == iters) and local_rank == 0:
-                if val_dataset is not None and iter > iters // 2:
-                    if pq > best_pq:
-                        best_pq = pq
-                        best_model_iter = iter
-                        best_model_dir = os.path.join(save_dir, "best_model")
-                        paddle.save(
-                            model.state_dict(),
-                            os.path.join(best_model_dir, 'model.pdparams'))
-                    logger.info(
-                        '[EVAL] The model with the best validation pq ({:.4f}) was saved at iter {}.'
-                        .format(best_pq, best_model_iter))
+            if (
+                (iter % save_interval == 0 or iter == iters)
+                and local_rank == 0
+                and val_dataset is not None
+                and iter > iters // 2
+            ):
+                if pq > best_pq:
+                    best_pq = pq
+                    best_model_iter = iter
+                    best_model_dir = os.path.join(save_dir, "best_model")
+                    paddle.save(
+                        model.state_dict(),
+                        os.path.join(best_model_dir, 'model.pdparams'))
+                logger.info(
+                    '[EVAL] The model with the best validation pq ({:.4f}) was saved at iter {}.'
+                    .format(best_pq, best_model_iter))
 
-                    if use_vdl:
-                        log_writer.add_scalar('Evaluate/PQ', pq, iter)
-                        log_writer.add_scalar('Evaluate/mIoU', miou, iter)
-                        log_writer.add_scalar('Evaluate/mAP', map, iter)
-                        log_writer.add_scalar('Evaluate/mAP50', map50, iter)
+                if use_vdl:
+                    log_writer.add_scalar('Evaluate/PQ', pq, iter)
+                    log_writer.add_scalar('Evaluate/mIoU', miou, iter)
+                    log_writer.add_scalar('Evaluate/mAP', map, iter)
+                    log_writer.add_scalar('Evaluate/mAP50', map50, iter)
             batch_start = time.time()
 
     # Calculate flops.

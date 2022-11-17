@@ -84,11 +84,9 @@ class Predictor:
             self.cost_averager = TimeAverager()
 
     def preprocess(self, img):
-        ori_shapes = []
-        processed_imgs = []
         processed_img = self.compose(img)[0]
-        processed_imgs.append(processed_img)
-        ori_shapes.append(img.shape)
+        processed_imgs = [processed_img]
+        ori_shapes = [img.shape]
         return processed_imgs, ori_shapes
 
     def run(self, img, bg):
@@ -124,7 +122,7 @@ class Predictor:
                 cur_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                 cur_gray = cv2.resize(cur_gray, (resize_w, resize_h))
                 optflow_map = optic_flow_process(cur_gray, score_map, self.prev_gray, self.prev_cfd, \
-                        self.disflow, self.is_init)
+                            self.disflow, self.is_init)
                 self.prev_gray = cur_gray.copy()
                 self.prev_cfd = optflow_map.copy()
                 self.is_init = False
@@ -170,5 +168,4 @@ class Predictor:
         if bg.ndim == 2:
             bg = bg[..., np.newaxis]
 
-        comb = (alpha * img + (1 - alpha) * bg).astype(np.uint8)
-        return comb
+        return (alpha * img + (1 - alpha) * bg).astype(np.uint8)

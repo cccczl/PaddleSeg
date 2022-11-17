@@ -45,15 +45,16 @@ class ADE20K(Dataset):
         self.transforms = Compose(transforms)
         mode = mode.lower()
         self.mode = mode
-        self.file_list = list()
+        self.file_list = []
         self.num_classes = self.NUM_CLASSES
         self.ignore_index = 255
         self.edge = edge
 
         if mode not in ['train', 'val']:
             raise ValueError(
-                "`mode` should be one of ('train', 'val') in ADE20K dataset, but got {}."
-                .format(mode))
+                f"`mode` should be one of ('train', 'val') in ADE20K dataset, but got {mode}."
+            )
+
 
         if self.transforms is None:
             raise ValueError("`transforms` is necessary, but it is None.")

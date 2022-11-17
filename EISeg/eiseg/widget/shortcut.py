@@ -96,7 +96,7 @@ class ShortcutWindow(QWidget):
                 key = key.toString()
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Warning)
-                msg.setWindowTitle(key + " " + self.tr("快捷键冲突"))
+                msg.setWindowTitle(f"{key} " + self.tr("快捷键冲突"))
                 msg.setText(
                     key
                     + " "

@@ -61,11 +61,11 @@ def evaluate(model,
     model.eval()
     nranks = paddle.distributed.ParallelEnv().nranks
     local_rank = paddle.distributed.ParallelEnv().local_rank
-    if nranks > 1:
-        # Initialize parallel environment if not done.
-        if not paddle.distributed.parallel.parallel_helper._is_parallel_ctx_initialized(
-        ):
-            paddle.distributed.init_parallel_env()
+    if (
+        nranks > 1
+        and not paddle.distributed.parallel.parallel_helper._is_parallel_ctx_initialized()
+    ):
+        paddle.distributed.init_parallel_env()
     batch_sampler = paddle.io.DistributedBatchSampler(
         eval_dataset, batch_size=1, shuffle=False, drop_last=False)
     loader = paddle.io.DataLoader(
@@ -82,8 +82,9 @@ def evaluate(model,
 
     if print_detail:
         logger.info(
-            "Start evaluating (total_samples={}, total_iters={})...".format(
-                len(eval_dataset), total_iters))
+            f"Start evaluating (total_samples={len(eval_dataset)}, total_iters={total_iters})..."
+        )
+
     progbar_val = progbar.Progbar(target=total_iters, verbose=1)
     reader_cost_averager = TimeAverager()
     batch_cost_averager = TimeAverager()

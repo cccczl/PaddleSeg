@@ -96,8 +96,6 @@ class SegNet(nn.Layer):
             utils.load_entire_model(self, self.pretrained)
 
     def forward(self, x):
-        logit_list = []
-
         x = self.enco1(x)
         x, ind1 = F.max_pool2d(x, kernel_size=2, stride=2, return_mask=True)
         size1 = x.shape
@@ -137,6 +135,4 @@ class SegNet(nn.Layer):
         x = F.max_unpool2d(x, indices=ind1, kernel_size=2, stride=2)
         x = self.deco5(x)
 
-        logit_list.append(x)
-
-        return logit_list
+        return [x]

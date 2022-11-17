@@ -59,12 +59,10 @@ class UNet(nn.Layer):
         self.init_weight()
 
     def forward(self, x):
-        logit_list = []
         x, short_cuts = self.encode(x)
         x = self.decode(x, short_cuts)
         logit = self.cls(x)
-        logit_list.append(logit)
-        return logit_list
+        return [logit]
 
     def init_weight(self):
         if self.pretrained is not None:
@@ -84,8 +82,7 @@ class Encoder(nn.Layer):
         ])
 
     def down_sampling(self, in_channels, out_channels):
-        modules = []
-        modules.append(nn.MaxPool2D(kernel_size=2, stride=2))
+        modules = [nn.MaxPool2D(kernel_size=2, stride=2)]
         modules.append(layers.ConvBNReLU(in_channels, out_channels, 3))
         modules.append(layers.ConvBNReLU(out_channels, out_channels, 3))
         return nn.Sequential(*modules)

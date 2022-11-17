@@ -185,11 +185,7 @@ class _SeparableConvBNReLU(nn.Layer):
 class InvertedResidual(nn.Layer):
     def __init__(self, input_channels, stride, out_channels=None):
         super().__init__()
-        if stride == 1:
-            branch_channel = int(input_channels / 2)
-        else:
-            branch_channel = input_channels
-
+        branch_channel = int(input_channels / 2) if stride == 1 else input_channels
         if out_channels is None:
             self.in_channels = int(branch_channel)
         else:

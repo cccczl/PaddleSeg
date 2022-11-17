@@ -154,14 +154,12 @@ class ANNHead(nn.Layer):
         self.enable_auxiliary_loss = enable_auxiliary_loss
 
     def forward(self, feat_list):
-        logit_list = []
         low_level_x = feat_list[self.backbone_indices[0]]
         high_level_x = feat_list[self.backbone_indices[1]]
         x = self.fusion(low_level_x, high_level_x)
         x = self.context(x)
         logit = self.cls(x)
-        logit_list.append(logit)
-
+        logit_list = [logit]
         if self.enable_auxiliary_loss:
             auxiliary_logit = self.auxlayer(low_level_x)
             logit_list.append(auxiliary_logit)
@@ -274,8 +272,7 @@ def _pp_module(x, psp_size):
         feat = F.adaptive_avg_pool2d(x, size)
         feat = paddle.reshape(feat, shape=(0, c, -1))
         priors.append(feat)
-    center = paddle.concat(priors, axis=-1)
-    return center
+    return paddle.concat(priors, axis=-1)
 
 
 class SelfAttentionBlock_AFNB(nn.Layer):
@@ -307,7 +304,7 @@ class SelfAttentionBlock_AFNB(nn.Layer):
         self.out_channels = out_channels
         self.key_channels = key_channels
         self.value_channels = value_channels
-        if out_channels == None:
+        if out_channels is None:
             self.out_channels = high_in_channels
         self.pool = nn.MaxPool2D(scale)
         self.f_key = layers.ConvBNReLU(

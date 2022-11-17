@@ -85,11 +85,7 @@ def predictEnsembleThree(model,
     model_crop.eval()
     nranks = paddle.distributed.get_world_size()
     local_rank = paddle.distributed.get_rank()
-    if nranks > 1:
-        img_lists = partition_list(image_list, nranks)
-    else:
-        img_lists = [image_list]
-
+    img_lists = partition_list(image_list, nranks) if nranks > 1 else [image_list]
     added_saved_dir = os.path.join(save_dir, 'added_prediction')
     pred_saved_dir = os.path.join(save_dir, 'pseudo_color_prediction')
 

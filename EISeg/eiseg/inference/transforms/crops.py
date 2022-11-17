@@ -85,7 +85,7 @@ def get_offsets(length, crop_size, min_overlap_ratio=0.2):
     overlap_width = int(crop_size * overlap_ratio)
 
     offsets = [0]
-    for i in range(1, N):
+    for _ in range(1, N):
         new_offset = offsets[-1] + crop_size - overlap_width
         if new_offset + crop_size > length:
             new_offset = length - crop_size

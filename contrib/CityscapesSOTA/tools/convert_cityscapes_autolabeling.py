@@ -25,7 +25,7 @@ def get_color_map_list(num_classes):
         The color map
     """
     color_map = num_classes * [0, 0, 0]
-    for i in range(0, num_classes):
+    for i in range(num_classes):
         j = 0
         lab = i
         while lab:
@@ -51,8 +51,7 @@ def main(args):
         glob.glob(os.path.join(label_dir, '*', '*_leftImg8bit.png')))
     print('start converting...')
     color_map = get_color_map_list(255)
-    count = 0
-    for file in autolabeling_label_files:
+    for count, file in enumerate(autolabeling_label_files, start=1):
         mask = np.array(Image.open(file))
         for k, v in cl.label2trainid.items():
             binary_mask = (mask == k)
@@ -65,9 +64,8 @@ def main(args):
         if not os.path.exists(path):
             os.makedirs(path)
         new_mask.save(os.path.join(path, file_split[-1]))
-        count += 1
         if count % 10 == 0:
-            print('processed {} images'.format(count))
+            print(f'processed {count} images')
 
 
 if __name__ == '__main__':

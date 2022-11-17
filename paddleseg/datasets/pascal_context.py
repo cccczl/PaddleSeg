@@ -40,15 +40,16 @@ class PascalContext(Dataset):
         self.transforms = Compose(transforms)
         mode = mode.lower()
         self.mode = mode
-        self.file_list = list()
+        self.file_list = []
         self.num_classes = self.NUM_CLASSES
         self.ignore_index = 255
         self.edge = edge
 
         if mode not in ['train', 'trainval', 'val']:
             raise ValueError(
-                "`mode` should be one of ('train', 'trainval', 'val') in PascalContext dataset, but got {}."
-                .format(mode))
+                f"`mode` should be one of ('train', 'trainval', 'val') in PascalContext dataset, but got {mode}."
+            )
+
 
         if self.transforms is None:
             raise ValueError("`transforms` is necessary, but it is None.")

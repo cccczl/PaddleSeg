@@ -117,19 +117,21 @@ class SFNetHead(nn.Layer):
             dim_reduction=True,
             align_corners=True)
         self.enable_auxiliary_loss = enable_auxiliary_loss
-        self.fpn_in = []
+        self.fpn_in = [
+            nn.Sequential(
+                nn.Conv2D(fpn_inplane, fpn_dim, 1),
+                layers.SyncBatchNorm(fpn_dim),
+                nn.ReLU(),
+            )
+            for fpn_inplane in fpn_inplanes[:-1]
+        ]
 
-        for fpn_inplane in fpn_inplanes[:-1]:
-            self.fpn_in.append(
-                nn.Sequential(
-                    nn.Conv2D(fpn_inplane, fpn_dim, 1),
-                    layers.SyncBatchNorm(fpn_dim), nn.ReLU()))
 
         self.fpn_in = nn.LayerList(self.fpn_in)
         self.fpn_out = []
         self.fpn_out_align = []
         self.dsn = []
-        for i in range(len(fpn_inplanes) - 1):
+        for _ in range(len(fpn_inplanes) - 1):
             self.fpn_out.append(
                 nn.Sequential(
                     layers.ConvBNReLU(fpn_dim, fpn_dim, 3, bias_attr=False)))
@@ -168,20 +170,22 @@ class SFNetHead(nn.Layer):
         output_size = paddle.shape(fpn_feature_list[0])[2:]
         fusion_list = [fpn_feature_list[0]]
 
-        for i in range(1, len(fpn_feature_list)):
-            fusion_list.append(
-                F.interpolate(
-                    fpn_feature_list[i],
-                    output_size,
-                    mode='bilinear',
-                    align_corners=True))
+        fusion_list.extend(
+            F.interpolate(
+                fpn_feature_list[i],
+                output_size,
+                mode='bilinear',
+                align_corners=True,
+            )
+            for i in range(1, len(fpn_feature_list))
+        )
+
         fusion_out = paddle.concat(fusion_list, 1)
         x = self.conv_last(fusion_out)
-        if self.enable_auxiliary_loss:
-            out.append(x)
-            return out
-        else:
+        if not self.enable_auxiliary_loss:
             return [x]
+        out.append(x)
+        return out
 
 
 class AlignedModule(nn.Layer):
@@ -217,8 +221,7 @@ class AlignedModule(nn.Layer):
         grid.unsqueeze(0).tile([input_shape[0], 1, 1, 1])
         grid = grid + paddle.transpose(flow, (0, 2, 3, 1)) / norm
 
-        output = F.grid_sample(input, grid)
-        return output
+        return F.grid_sample(input, grid)
 
     def forward(self, x):
         low_feature, h_feature = x

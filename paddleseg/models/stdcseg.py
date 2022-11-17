@@ -137,8 +137,7 @@ class AttentionRefinementModule(nn.Layer):
         atten = self.conv_atten(atten)
         atten = self.bn_atten(atten)
         atten = self.sigmoid_atten(atten)
-        out = paddle.multiply(feat, atten)
-        return out
+        return paddle.multiply(feat, atten)
 
 
 class ContextPath(nn.Layer):
@@ -147,8 +146,6 @@ class ContextPath(nn.Layer):
         self.backbone = backbone
         self.arm16 = AttentionRefinementModule(512, 128)
         inplanes = 1024
-        if use_conv_last:
-            inplanes = 1024
         self.arm32 = AttentionRefinementModule(inplanes, 128)
         self.conv_head32 = layers.ConvBNReLU(
             128, 128, kernel_size=3, stride=1, padding=1)
@@ -212,5 +209,4 @@ class FeatureFusionModule(nn.Layer):
         atten = self.conv2(atten)
         atten = self.sigmoid(atten)
         feat_atten = paddle.multiply(feat, atten)
-        feat_out = feat_atten + feat
-        return feat_out
+        return feat_atten + feat

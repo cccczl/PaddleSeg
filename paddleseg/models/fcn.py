@@ -129,12 +129,10 @@ class FCNHead(nn.Layer):
         self.init_weight()
 
     def forward(self, feat_list):
-        logit_list = []
         x = feat_list[self.backbone_indices[0]]
         x = self.conv_1(x)
         logit = self.cls(x)
-        logit_list.append(logit)
-        return logit_list
+        return [logit]
 
     def init_weight(self):
         for layer in self.sublayers():

@@ -46,9 +46,9 @@ class MSE():
             trimap = np.ones_like(gt) * 128
         if not (pred.shape == gt.shape == trimap.shape):
             raise ValueError(
-                'The shape of `pred`, `gt` and `trimap` should be equal. '
-                'but they are {}, {} and {}'.format(pred.shape, gt.shape,
-                                                    trimap.shape))
+                f'The shape of `pred`, `gt` and `trimap` should be equal. but they are {pred.shape}, {gt.shape} and {trimap.shape}'
+            )
+
         mask = trimap == 128
         pixels = float(mask.sum())
         pred = pred / 255.
@@ -60,8 +60,7 @@ class MSE():
         self.count += 1
 
     def evaluate(self):
-        mse = self.mse_diffs / self.count if self.count > 0 else 0
-        return mse
+        return self.mse_diffs / self.count if self.count > 0 else 0
 
 
 class SAD():
@@ -86,9 +85,9 @@ class SAD():
             trimap = np.ones_like(gt) * 128
         if not (pred.shape == gt.shape == trimap.shape):
             raise ValueError(
-                'The shape of `pred`, `gt` and `trimap` should be equal. '
-                'but they are {}, {} and {}'.format(pred.shape, gt.shape,
-                                                    trimap.shape))
+                f'The shape of `pred`, `gt` and `trimap` should be equal. but they are {pred.shape}, {gt.shape} and {trimap.shape}'
+            )
+
 
         mask = trimap == 128
         pred = pred / 255.
@@ -101,8 +100,7 @@ class SAD():
         self.count += 1
 
     def evaluate(self):
-        sad = self.sad_diffs / self.count if self.count > 0 else 0
-        return sad
+        return self.sad_diffs / self.count if self.count > 0 else 0
 
 
 class Grad():
@@ -117,12 +115,10 @@ class Grad():
         self.count = 0
 
     def gauss(self, x, sigma):
-        y = np.exp(-x**2 / (2 * sigma**2)) / (sigma * np.sqrt(2 * np.pi))
-        return y
+        return np.exp(-x**2 / (2 * sigma**2)) / (sigma * np.sqrt(2 * np.pi))
 
     def dgauss(self, x, sigma):
-        y = -x * self.gauss(x, sigma) / (sigma**2)
-        return y
+        return -x * self.gauss(x, sigma) / (sigma**2)
 
     def gaussgradient(self, im, sigma):
         epsilon = 1e-2
@@ -130,8 +126,8 @@ class Grad():
             -2 * np.log(np.sqrt(2 * np.pi) * sigma * epsilon))).astype(np.int32)
         size = 2 * halfsize + 1
         hx = np.zeros((size, size))
-        for i in range(0, size):
-            for j in range(0, size):
+        for i in range(size):
+            for j in range(size):
                 u = [i - halfsize, j - halfsize]
                 hx[i, j] = self.gauss(u[0], sigma) * self.dgauss(u[1], sigma)
 
@@ -156,9 +152,9 @@ class Grad():
             trimap = np.ones_like(gt) * 128
         if not (pred.shape == gt.shape == trimap.shape):
             raise ValueError(
-                'The shape of `pred`, `gt` and `trimap` should be equal. '
-                'but they are {}, {} and {}'.format(pred.shape, gt.shape,
-                                                    trimap.shape))
+                f'The shape of `pred`, `gt` and `trimap` should be equal. but they are {pred.shape}, {gt.shape} and {trimap.shape}'
+            )
+
 
         mask = trimap == 128
         gt = gt / 255.
@@ -176,8 +172,7 @@ class Grad():
         self.count += 1
 
     def evaluate(self):
-        grad = self.grad_diffs / self.count if self.count > 0 else 0
-        return grad
+        return self.grad_diffs / self.count if self.count > 0 else 0
 
 
 class Conn():
@@ -193,8 +188,7 @@ class Conn():
 
     def getLargestCC(self, segmentation):
         labels = label(segmentation, connectivity=1)
-        largestCC = labels == np.argmax(np.bincount(labels.flat))
-        return largestCC
+        return labels == np.argmax(np.bincount(labels.flat))
 
     def update(self, pred, gt, trimap=None, step=0.1):
         """
@@ -209,9 +203,9 @@ class Conn():
             trimap = np.ones_like(gt) * 128
         if not (pred.shape == gt.shape == trimap.shape):
             raise ValueError(
-                'The shape of `pred`, `gt` and `trimap` should be equal. '
-                'but they are {}, {} and {}'.format(pred.shape, gt.shape,
-                                                    trimap.shape))
+                f'The shape of `pred`, `gt` and `trimap` should be equal. but they are {pred.shape}, {gt.shape} and {trimap.shape}'
+            )
+
 
         mask = trimap == 128
         gt = gt / 255.
@@ -240,5 +234,4 @@ class Conn():
         self.count += 1
 
     def evaluate(self):
-        conn = self.conn_diffs / self.count if self.count > 0 else 0
-        return conn
+        return self.conn_diffs / self.count if self.count > 0 else 0

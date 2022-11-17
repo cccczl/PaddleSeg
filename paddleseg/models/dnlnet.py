@@ -184,8 +184,7 @@ class DisentangledNonLocal2D(layers.NonLocal2D):
         if self.use_scale:
             pairwise_weight /= theta_x.shape[-1]**0.5
         pairwise_weight /= self.temperature
-        pairwise_weight = F.softmax(pairwise_weight, -1)
-        return pairwise_weight
+        return F.softmax(pairwise_weight, -1)
 
     def forward(self, x):
         x_shape = paddle.shape(x)
@@ -222,5 +221,4 @@ class DisentangledNonLocal2D(layers.NonLocal2D):
             paddle.reshape(self.conv_mask(x), [0, 1, -1]), -1)
         unary_x = paddle.matmul(unary_mask, g_x).transpose([0, 2, 1]).reshape(
             [0, self.inter_channels, 1, 1])
-        output = x + self.conv_out(y + unary_x)
-        return output
+        return x + self.conv_out(y + unary_x)

@@ -74,7 +74,7 @@ class Config(object):
             raise ValueError('Please specify the configuration file path.')
 
         if not os.path.exists(path):
-            raise FileNotFoundError('File {} does not exist'.format(path))
+            raise FileNotFoundError(f'File {path} does not exist')
 
         self._model = None
         self._losses = None
@@ -141,10 +141,10 @@ class Config(object):
 
     @property
     def iters(self) -> int:
-        iters = self.dic.get('iters')
-        if not iters:
+        if iters := self.dic.get('iters'):
+            return iters
+        else:
             raise RuntimeError('No iters specified in the configuration file.')
-        return iters
 
     @property
     def lr_scheduler(self) -> paddle.optimizer.lr.LRScheduler:
@@ -195,10 +195,7 @@ class Config(object):
 
     @property
     def optimizer(self) -> paddle.optimizer.Optimizer:
-        if 'lr_scheduler' in self.dic:
-            lr = self.lr_scheduler
-        else:
-            lr = self.learning_rate
+        lr = self.lr_scheduler if 'lr_scheduler' in self.dic else self.learning_rate
         args = self.optimizer_args
         optimizer_type = args.pop('type')
 
@@ -212,7 +209,7 @@ class Config(object):
             return getattr(paddle.optimizer, optimizer_type)(
                 lr, parameters=self.model.parameters(), **args)
 
-        raise RuntimeError('Unknown optimizer type {}.'.format(optimizer_type))
+        raise RuntimeError(f'Unknown optimizer type {optimizer_type}.')
 
     @property
     def optimizer_args(self) -> dict:
@@ -257,40 +254,42 @@ class Config(object):
             dict: A dict including the loss parameters and layers.
         """
         args = self.dic.get(loss_name, {}).copy()
-        if 'types' in args and 'coef' in args:
-            len_types = len(args['types'])
-            len_coef = len(args['coef'])
-            if len_types != len_coef:
-                if len_types == 1:
-                    args['types'] = args['types'] * len_coef
-                else:
-                    raise ValueError(
-                        'The length of types should equal to coef or equal to 1 in loss config, but they are {} and {}.'
-                        .format(len_types, len_coef))
-        else:
+        if 'types' not in args or 'coef' not in args:
             raise ValueError(
                 'Loss config should contain keys of "types" and "coef"')
 
-        losses = dict()
+        len_types = len(args['types'])
+        len_coef = len(args['coef'])
+        if len_types != len_coef:
+            if len_types == 1:
+                args['types'] = args['types'] * len_coef
+            else:
+                raise ValueError(
+                    f'The length of types should equal to coef or equal to 1 in loss config, but they are {len_types} and {len_coef}.'
+                )
+
+        losses = {}
         for key, val in args.items():
             if key == 'types':
                 losses['types'] = []
                 for item in args['types']:
                     if item['type'] != 'MixedLoss':
                         if 'ignore_index' in item:
-                            assert item['ignore_index'] == self.train_dataset.ignore_index, 'If ignore_index of loss is set, '\
-                            'the ignore_index of loss and train_dataset must be the same. \nCurrently, loss ignore_index = {}, '\
-                            'train_dataset ignore_index = {}. \nIt is recommended not to set loss ignore_index, so it is consistent with '\
-                            'train_dataset by default.'.format(item['ignore_index'], self.train_dataset.ignore_index)
+                            assert (
+                                item['ignore_index']
+                                == self.train_dataset.ignore_index
+                            ), f"If ignore_index of loss is set, the ignore_index of loss and train_dataset must be the same. \nCurrently, loss ignore_index = {item['ignore_index']}, train_dataset ignore_index = {self.train_dataset.ignore_index}. \nIt is recommended not to set loss ignore_index, so it is consistent with train_dataset by default."
+
                         item['ignore_index'] = \
-                            self.train_dataset.ignore_index
+                                self.train_dataset.ignore_index
                     losses['types'].append(self._load_object(item))
             else:
                 losses[key] = val
         if len(losses['coef']) != len(losses['types']):
             raise RuntimeError(
-                'The length of coef should equal to types in loss config: {} != {}.'
-                .format(len(losses['coef']), len(losses['types'])))
+                f"The length of coef should equal to types in loss config: {len(losses['coef'])} != {len(losses['types'])}."
+            )
+
         return losses
 
     @property
@@ -298,7 +297,7 @@ class Config(object):
         model_cfg = self.dic.get('model').copy()
         if not model_cfg:
             raise RuntimeError('No model specified in the configuration file.')
-        if not 'num_classes' in model_cfg:
+        if 'num_classes' not in model_cfg:
             num_classes = None
             if self.train_dataset_config:
                 if hasattr(self.train_dataset_class, 'NUM_CLASSES'):
@@ -339,16 +338,12 @@ class Config(object):
     @property
     def train_dataset(self) -> paddle.io.Dataset:
         _train_dataset = self.train_dataset_config
-        if not _train_dataset:
-            return None
-        return self._load_object(_train_dataset)
+        return self._load_object(_train_dataset) if _train_dataset else None
 
     @property
     def val_dataset(self) -> paddle.io.Dataset:
         _val_dataset = self.val_dataset_config
-        if not _val_dataset:
-            return None
-        return self._load_object(_val_dataset)
+        return self._load_object(_val_dataset) if _val_dataset else None
 
     def _load_component(self, com_name: str) -> Any:
         com_list = [
@@ -359,14 +354,12 @@ class Config(object):
         for com in com_list:
             if com_name in com.components_dict:
                 return com[com_name]
-        else:
-            raise RuntimeError(
-                'The specified component was not found {}.'.format(com_name))
+        raise RuntimeError(f'The specified component was not found {com_name}.')
 
     def _load_object(self, cfg: dict) -> Any:
         cfg = cfg.copy()
         if 'type' not in cfg:
-            raise RuntimeError('No object information in {}.'.format(cfg))
+            raise RuntimeError(f'No object information in {cfg}.')
 
         component = self._load_component(cfg.pop('type'))
 

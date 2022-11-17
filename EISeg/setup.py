@@ -12,9 +12,7 @@ HERE = pathlib.Path(__file__).parent
 
 README = (HERE / "README.md").read_text(encoding="utf-8")
 
-with open("requirements.txt") as fin:
-    REQUIRED_PACKAGES = fin.read()
-
+REQUIRED_PACKAGES = pathlib.Path("requirements.txt").read_text()
 ext_modules = [
     Extension(
         "pycocotools._mask",

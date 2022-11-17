@@ -146,14 +146,11 @@ class DeepLabV3PHead(nn.Layer):
         self.backbone_indices = backbone_indices
 
     def forward(self, feat_list):
-        logit_list = []
         low_level_feat = feat_list[self.backbone_indices[0]]
         x = feat_list[self.backbone_indices[1]]
         x = self.aspp(x)
         logit = self.decoder(x, low_level_feat)
-        logit_list.append(logit)
-
-        return logit_list
+        return [logit]
 
 
 @manager.MODELS.add_component
@@ -235,13 +232,10 @@ class DeepLabV3Head(nn.Layer):
         self.backbone_indices = backbone_indices
 
     def forward(self, feat_list):
-        logit_list = []
         x = feat_list[self.backbone_indices[0]]
         x = self.aspp(x)
         logit = self.cls(x)
-        logit_list.append(logit)
-
-        return logit_list
+        return [logit]
 
 
 class Decoder(nn.Layer):

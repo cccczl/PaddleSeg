@@ -74,7 +74,7 @@ class Dataset(paddle.io.Dataset):
                  edge=False):
         self.dataset_root = dataset_root
         self.transforms = Compose(transforms)
-        self.file_list = list()
+        self.file_list = []
         mode = mode.lower()
         self.mode = mode
         self.num_classes = num_classes
@@ -82,17 +82,14 @@ class Dataset(paddle.io.Dataset):
         self.edge = edge
 
         if mode.lower() not in ['train', 'val', 'test']:
-            raise ValueError(
-                "mode should be 'train', 'val' or 'test', but got {}.".format(
-                    mode))
+            raise ValueError(f"mode should be 'train', 'val' or 'test', but got {mode}.")
 
         if self.transforms is None:
             raise ValueError("`transforms` is necessary, but it is None.")
 
         self.dataset_root = dataset_root
         if not os.path.exists(self.dataset_root):
-            raise FileNotFoundError('there is not `dataset_root`: {}.'.format(
-                self.dataset_root))
+            raise FileNotFoundError(f'there is not `dataset_root`: {self.dataset_root}.')
 
         if mode == 'train':
             if train_path is None:
@@ -100,8 +97,7 @@ class Dataset(paddle.io.Dataset):
                     'When `mode` is "train", `train_path` is necessary, but it is None.'
                 )
             elif not os.path.exists(train_path):
-                raise FileNotFoundError(
-                    '`train_path` is not found: {}'.format(train_path))
+                raise FileNotFoundError(f'`train_path` is not found: {train_path}')
             else:
                 file_path = train_path
         elif mode == 'val':
@@ -110,29 +106,27 @@ class Dataset(paddle.io.Dataset):
                     'When `mode` is "val", `val_path` is necessary, but it is None.'
                 )
             elif not os.path.exists(val_path):
-                raise FileNotFoundError(
-                    '`val_path` is not found: {}'.format(val_path))
+                raise FileNotFoundError(f'`val_path` is not found: {val_path}')
             else:
                 file_path = val_path
+        elif test_path is None:
+            raise ValueError(
+                'When `mode` is "test", `test_path` is necessary, but it is None.'
+            )
+        elif not os.path.exists(test_path):
+            raise FileNotFoundError(f'`test_path` is not found: {test_path}')
         else:
-            if test_path is None:
-                raise ValueError(
-                    'When `mode` is "test", `test_path` is necessary, but it is None.'
-                )
-            elif not os.path.exists(test_path):
-                raise FileNotFoundError(
-                    '`test_path` is not found: {}'.format(test_path))
-            else:
-                file_path = test_path
+            file_path = test_path
 
         with open(file_path, 'r') as f:
             for line in f:
                 items = line.strip().split(separator)
                 if len(items) != 2:
-                    if mode == 'train' or mode == 'val':
+                    if mode in ['train', 'val']:
                         raise ValueError(
-                            "File list format incorrect! In training or evaluation task it should be"
-                            " image_name{}label_name\\n".format(separator))
+                            f"File list format incorrect! In training or evaluation task it should be image_name{separator}label_name\\n"
+                        )
+
                     image_path = os.path.join(self.dataset_root, items[0])
                     label_path = None
                 else:

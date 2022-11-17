@@ -80,7 +80,7 @@ class CityscapesAutolabeling(paddle.io.Dataset):
                  add_val=False):
         self.dataset_root = dataset_root
         self.transforms = Compose(transforms)
-        self.file_list = list()
+        self.file_list = []
         mode = mode.lower()
         self.mode = mode
         self.num_classes = 19
@@ -88,9 +88,7 @@ class CityscapesAutolabeling(paddle.io.Dataset):
         self.coarse_multiple = coarse_multiple
 
         if mode not in ['train', 'val', 'test']:
-            raise ValueError(
-                "mode should be 'train', 'val' or 'test', but got {}.".format(
-                    mode))
+            raise ValueError(f"mode should be 'train', 'val' or 'test', but got {mode}.")
 
         if self.transforms is None:
             raise ValueError("`transforms` is necessary, but it is None.")
@@ -151,8 +149,9 @@ class CityscapesAutolabeling(paddle.io.Dataset):
                 glob.glob(os.path.join(img_dir, '*', '*_leftImg8bit.png')))
             if len(coarse_img_files) != len(coarse_label_files):
                 raise ValueError(
-                    "The number of images = {} is not equal to the number of labels = {} in Cityscapes Autolabeling dataset."
-                    .format(len(coarse_img_files), len(coarse_label_files)))
+                    f"The number of images = {len(coarse_img_files)} is not equal to the number of labels = {len(coarse_label_files)} in Cityscapes Autolabeling dataset."
+                )
+
 
             self.coarse_file_list = [[img_path, label_path]
                                      for img_path, label_path in zip(

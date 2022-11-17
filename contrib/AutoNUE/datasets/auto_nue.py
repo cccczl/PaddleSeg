@@ -63,7 +63,7 @@ class AutoNue(paddle.io.Dataset):
                  add_val=False):
         self.dataset_root = dataset_root
         self.transforms = Compose(transforms)
-        self.file_list = list()
+        self.file_list = []
         mode = mode.lower()
         self.mode = mode
         self.num_classes = 26
@@ -71,9 +71,7 @@ class AutoNue(paddle.io.Dataset):
         self.coarse_multiple = coarse_multiple
 
         if mode not in ['train', 'val', 'test']:
-            raise ValueError(
-                "mode should be 'train', 'val' or 'test', but got {}.".format(
-                    mode))
+            raise ValueError(f"mode should be 'train', 'val' or 'test', but got {mode}.")
 
         if self.transforms is None:
             raise ValueError("`transforms` is necessary, but it is None.")
@@ -103,25 +101,23 @@ class AutoNue(paddle.io.Dataset):
         self.num_files = len(self.file_list)
         self.total_num_files = self.num_files
 
-        if mode == 'train':
-            # whether to add val set in training
-            if add_val:
-                label_files = sorted(
-                    glob.glob(
-                        os.path.join(label_dir, 'val', '*',
-                                     '*_gtFine_labellevel3Ids.png')))
-                img_files = sorted(
-                    glob.glob(
-                        os.path.join(img_dir, 'val', '*', '*_leftImg8bit.*')))
-                val_file_list = [[
-                    img_path, label_path
-                ] for img_path, label_path in zip(img_files, label_files)]
-                self.file_list.extend(val_file_list)
-                for ii in range(len(self.file_list)):
-                    print(self.file_list[ii])
-                print(len(self.file_list))
-                self.num_files = len(self.file_list)
-                self.total_num_files = self.num_files
+        if mode == 'train' and add_val:
+            label_files = sorted(
+                glob.glob(
+                    os.path.join(label_dir, 'val', '*',
+                                 '*_gtFine_labellevel3Ids.png')))
+            img_files = sorted(
+                glob.glob(
+                    os.path.join(img_dir, 'val', '*', '*_leftImg8bit.*')))
+            val_file_list = [[
+                img_path, label_path
+            ] for img_path, label_path in zip(img_files, label_files)]
+            self.file_list.extend(val_file_list)
+            for file in self.file_list:
+                print(file)
+            print(len(self.file_list))
+            self.num_files = len(self.file_list)
+            self.total_num_files = self.num_files
 
             # use coarse dataset only in training
             # img_dir = os.path.join('data/IDD_Detection/JPEGImages/all')

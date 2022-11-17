@@ -34,7 +34,7 @@ class DistMaps(nn.Layer):
             coord_rows, coord_cols = paddle.meshgrid(row_array, col_array)
             coords = paddle.unsqueeze(paddle.stack([coord_rows, coord_cols], axis=0), axis=0).tile(
                 [points.shape[0], 1, 1, 1])
-            
+
             add_xy = (points * self.spatial_scale).reshape([points.shape[0], points.shape[1], 1, 1])
             coords = coords - add_xy
             if not self.use_disks:

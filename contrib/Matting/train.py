@@ -117,7 +117,7 @@ def main(args):
         random.seed(args.seed)
 
     env_info = get_sys_env()
-    info = ['{}: {}'.format(k, v) for k, v in env_info.items()]
+    info = [f'{k}: {v}' for k, v in env_info.items()]
     info = '\n'.join(['', format('Environment Information', '-^48s')] + info +
                      ['-' * 48])
     logger.info(info)
@@ -146,8 +146,7 @@ def main(args):
 
     val_dataset = cfg.val_dataset if args.do_eval else None
 
-    msg = '\n---------------Config Information---------------\n'
-    msg += str(cfg)
+    msg = '\n---------------Config Information---------------\n' + str(cfg)
     msg += '------------------------------------------------'
     logger.info(msg)
 

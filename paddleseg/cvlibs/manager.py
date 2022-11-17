@@ -64,20 +64,19 @@ class ComponentManager:
     """
 
     def __init__(self, name=None):
-        self._components_dict = dict()
+        self._components_dict = {}
         self._name = name
 
     def __len__(self):
         return len(self._components_dict)
 
     def __repr__(self):
-        name_str = self._name if self._name else self.__class__.__name__
-        return "{}:{}".format(name_str, list(self._components_dict.keys()))
+        name_str = self._name or self.__class__.__name__
+        return f"{name_str}:{list(self._components_dict.keys())}"
 
     def __getitem__(self, item):
         if item not in self._components_dict.keys():
-            raise KeyError("{} does not exist in availabel {}".format(
-                item, self))
+            raise KeyError(f"{item} does not exist in availabel {self}")
         return self._components_dict[item]
 
     @property
@@ -102,9 +101,7 @@ class ComponentManager:
 
         # Currently only support class or function type
         if not (inspect.isclass(component) or inspect.isfunction(component)):
-            raise TypeError(
-                "Expect class/function type, but received {}".format(
-                    type(component)))
+            raise TypeError(f"Expect class/function type, but received {type(component)}")
 
         # Obtain the internal name of the component
         component_name = component.__name__
@@ -112,13 +109,10 @@ class ComponentManager:
         # Check whether the component was added already
         if component_name in self._components_dict.keys():
             warnings.warn(
-                "{} exists already! It is now updated to {} !!!".format(
-                    component_name, component))
-            self._components_dict[component_name] = component
+                f"{component_name} exists already! It is now updated to {component} !!!"
+            )
 
-        else:
-            # Take the internal name of the component as its key
-            self._components_dict[component_name] = component
+        self._components_dict[component_name] = component
 
     def add_component(self, components):
         """

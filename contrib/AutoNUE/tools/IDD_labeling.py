@@ -24,7 +24,7 @@ def get_image_list(image_path):
             image_list.append(image_path)
     elif os.path.isdir(image_path):
         image_dir = image_path
-        for root, dirs, files in os.walk(image_path):
+        for root, dirs, files in os.walk(image_dir):
             for f in files:
                 if '.ipynb_checkpoints' in root:
                     continue
@@ -35,7 +35,7 @@ def get_image_list(image_path):
             '`--image_path` is not found. it should be an image file or a directory including images'
         )
 
-    if len(image_list) == 0:
+    if not image_list:
         raise RuntimeError('There are not image file in `--image_path`')
 
     return image_list, image_dir
@@ -45,12 +45,12 @@ def refine_pred():
     image_list, image_dir = get_image_list(
         'detection_out/pseudo_color_prediction')
     for ii in image_list:
-        name_pred = 'detection_out/pseudo_color_prediction/' + ii
-        name_label = 'data/IDD_Detection/Annotations/all/' + ii[:-3] + 'xml'
+        name_pred = f'detection_out/pseudo_color_prediction/{ii}'
+        name_label = f'data/IDD_Detection/Annotations/all/{ii[:-3]}xml'
         pred = np.array(Image.open(name_pred)).astype(np.float32)
         if not os.path.exists(name_label):
             pred_mask = utils.visualize.get_pseudo_color_map(pred)
-            pred_saved_path = 'detect_out/pred_refine/' + ii
+            pred_saved_path = f'detect_out/pred_refine/{ii}'
             mkdir(pred_saved_path)
             pred_mask.save(pred_saved_path)
             continue
@@ -60,7 +60,7 @@ def refine_pred():
         objects = root.getElementsByTagName("object")
         for item in objects:
             name = item.getElementsByTagName("name")[0]
-            if name.firstChild.data == 'traffic sign' or name.firstChild.data == 'traffic light':
+            if name.firstChild.data in ['traffic sign', 'traffic light']:
                 print(ii)
                 xmin = int(
                     item.getElementsByTagName('bndbox')[0].getElementsByTagName(
@@ -80,7 +80,7 @@ def refine_pred():
                     pred[ymin:ymax, xmin:xmax] = 19
 
         pred_mask = utils.visualize.get_pseudo_color_map(pred)
-        pred_saved_path = 'detect_out/pred_refine/' + ii
+        pred_saved_path = f'detect_out/pred_refine/{ii}'
         mkdir(pred_saved_path)
         pred_mask.save(pred_saved_path)
 
@@ -90,11 +90,11 @@ def test():
     image_list, image_dir = get_image_list(path)
 
     for ii in image_list:
-        name_xml = '/Users/liliulei/Downloads/IDD_Detection/Annotations/frontNear/' + ii[:
-                                                                                         -3] + 'xml'
+        name_xml = f'/Users/liliulei/Downloads/IDD_Detection/Annotations/frontNear/{ii[:-3]}xml'
+
         image = cv2.imread(path + ii)
         # print(image.shape)
-        (h, w) = image.shape[0:2]
+        (h, w) = image.shape[:2]
 
         pred = np.zeros_like(image)
 
@@ -104,7 +104,7 @@ def test():
         for item in objects:
             name = item.getElementsByTagName("name")[0]
             print(name.firstChild.data)
-            if name.firstChild.data == 'traffic sign' or name.firstChild.data == 'traffic light':
+            if name.firstChild.data in ['traffic sign', 'traffic light']:
                 xmin = int(
                     item.getElementsByTagName('bndbox')[0].getElementsByTagName(
                         'xmin')[0].firstChild.data)

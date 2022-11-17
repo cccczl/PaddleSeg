@@ -143,8 +143,7 @@ def get_dataset(args):
         'dataset_root': args.dataset_path,
         'mode': args.dataset_mode
     }
-    dataset = comp[args.dataset_type](**kwargs)
-    return dataset
+    return comp[args.dataset_type](**kwargs)
 
 
 def auto_tune(args, dataset, img_nums):

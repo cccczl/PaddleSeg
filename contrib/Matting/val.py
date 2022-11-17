@@ -75,8 +75,7 @@ def main(args):
             'The length of val_dataset is 0. Please check if your dataset is valid'
         )
 
-    msg = '\n---------------Config Information---------------\n'
-    msg += str(cfg)
+    msg = '\n---------------Config Information---------------\n' + str(cfg)
     msg += '------------------------------------------------'
     logger.info(msg)
 

@@ -40,9 +40,9 @@ class COCO:
             "info": "info",
             "licenses": "licenses",
         }  # the complete json
-        self.anns = dict()  # anns[annId]={}
-        self.cats = dict()  # cats[catId] = {}
-        self.imgs = dict()  # imgs[imgId] = {}
+        self.anns = {}
+        self.cats = {}
+        self.imgs = {}
         self.imgToAnns = defaultdict(list)  # imgToAnns[imgId] = [ann]
         self.catToImgs = defaultdict(list)  # catToImgs[catId] = [imgId]
         self.imgNameToId = defaultdict(list)  # imgNameToId[name] = imgId
@@ -54,7 +54,8 @@ class COCO:
             dataset = json.load(open(annotation_file, "r"))
             assert (
                 type(dataset) == dict
-            ), "annotation file format {} not supported".format(type(dataset))
+            ), f"annotation file format {type(dataset)} not supported"
+
             print("Done (t={:0.2f}s)".format(time.time() - tic))
             self.dataset = dataset
             self.createIndex()
@@ -209,10 +210,7 @@ class COCO:
         if not id:
             self.maxAnnId += 1
             id = self.maxAnnId
-        if not bbox:
-            x, y, width, height = 0, 0, 0, 0
-        else:
-            x, y, width, height = bbox[:]
+        x, y, width, height = bbox[:] if bbox else (0, 0, 0, 0)
         # TODO: cal area
         if not area:
             area = 0
@@ -275,7 +273,7 @@ class COCO:
         :return:
         """
         for key, value in self.dataset["info"].items():
-            print("{}: {}".format(key, value))
+            print(f"{key}: {value}")
 
     def getAnnIds(self, imgIds=[], catIds=[], areaRng=[], iscrowd=None):
         """
@@ -292,7 +290,7 @@ class COCO:
         if len(imgIds) == len(catIds) == len(areaRng) == 0:
             anns = self.dataset["annotations"]
         else:
-            if not len(imgIds) == 0:
+            if len(imgIds) != 0:
                 lists = [
                     self.imgToAnns[imgId] for imgId in imgIds if imgId in self.imgToAnns
                 ]
@@ -313,11 +311,11 @@ class COCO:
                     if ann["area"] > areaRng[0] and ann["area"] < areaRng[1]
                 ]
             )
-        if not iscrowd == None:
-            ids = [ann["id"] for ann in anns if ann["iscrowd"] == iscrowd]
-        else:
-            ids = [ann["id"] for ann in anns]
-        return ids
+        return (
+            [ann["id"] for ann in anns if ann["iscrowd"] == iscrowd]
+            if iscrowd is not None
+            else [ann["id"] for ann in anns]
+        )
 
     def getCatIds(self, catNms=[], supNms=[], catIds=[]):
         """
@@ -331,10 +329,8 @@ class COCO:
         supNms = supNms if _isArrayLike(supNms) else [supNms]
         catIds = catIds if _isArrayLike(catIds) else [catIds]
 
-        if len(catNms) == len(supNms) == len(catIds) == 0:
-            cats = self.dataset["categories"]
-        else:
-            cats = self.dataset["categories"]
+        cats = self.dataset["categories"]
+        if not len(catNms) == len(supNms) == len(catIds) == 0:
             cats = (
                 cats
                 if len(catNms) == 0
@@ -350,8 +346,7 @@ class COCO:
                 if len(catIds) == 0
                 else [cat for cat in cats if cat["id"] in catIds]
             )
-        ids = [cat["id"] for cat in cats]
-        return ids
+        return [cat["id"] for cat in cats]
 
     def getImgIds(self, imgIds=[], catIds=[]):
         """
@@ -580,10 +575,7 @@ class COCO:
         if tarDir is None:
             print("Please specify target directory")
             return -1
-        if len(imgIds) == 0:
-            imgs = self.imgs.values()
-        else:
-            imgs = self.loadImgs(imgIds)
+        imgs = self.imgs.values() if len(imgIds) == 0 else self.loadImgs(imgIds)
         N = len(imgs)
         if not os.path.exists(tarDir):
             os.makedirs(tarDir)
@@ -610,7 +602,7 @@ class COCO:
         ann = []
         for i in range(N):
             if i % 1000000 == 0:
-                print("{}/{}".format(i, N))
+                print(f"{i}/{N}")
             ann += [
                 {
                     "image_id": int(data[i, 0]),

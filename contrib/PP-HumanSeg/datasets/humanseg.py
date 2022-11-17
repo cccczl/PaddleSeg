@@ -42,15 +42,13 @@ class HumanSeg(Dataset):
         self.transforms = Compose(transforms)
         mode = mode.lower()
         self.mode = mode
-        self.file_list = list()
+        self.file_list = []
         self.num_classes = 2
         self.ignore_index = 255
         self.edge = edge
 
         if mode not in ['train', 'val', 'test']:
-            raise ValueError(
-                "`mode` should be 'train', 'val' or 'test', but got {}.".format(
-                    mode))
+            raise ValueError(f"`mode` should be 'train', 'val' or 'test', but got {mode}.")
 
         if self.transforms is None:
             raise ValueError("`transforms` is necessary, but it is None.")
@@ -66,7 +64,7 @@ class HumanSeg(Dataset):
             for line in f:
                 items = line.strip().split()
                 if len(items) != 2:
-                    if mode == 'train' or mode == 'val':
+                    if mode in ['train', 'val']:
                         raise Exception(
                             "File list format incorrect! It should be"
                             " image_name label_name\\n")

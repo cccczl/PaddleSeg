@@ -77,8 +77,9 @@ class SegmentationTransformer(nn.Layer):
                 **head_config)
         else:
             raise RuntimeError(
-                'Unsupported segmentation head type {}. Only naive/pup/mla is valid.'
-                .format(head))
+                f'Unsupported segmentation head type {head}. Only naive/pup/mla is valid.'
+            )
+
 
         self.align_corners = align_corners
         self.pretrained = pretrained
@@ -156,13 +157,11 @@ class NaiveHead(nn.Layer):
                 param_init.constant_init(layer.bias, value=0.0)
 
     def forward(self, x, _shape):
-        logits = []
         feat = x[self.backbone_indices[-1]]
         feat = self.cls_head_norm(feat).transpose([0, 2, 1]).reshape(
             [0, self.in_channels, _shape[2], _shape[3]])
 
-        logits.append(self.cls_head(feat))
-
+        logits = [self.cls_head(feat)]
         if self.training:
             for idx, _head in enumerate(self.aux_heads):
                 feat = x[self.backbone_indices[idx]]
@@ -260,13 +259,11 @@ class PUPHead(nn.Layer):
                 param_init.constant_init(layer.bias, value=0.0)
 
     def forward(self, x, _shape):
-        logits = []
         feat = x[self.backbone_indices[-1]]
         feat = self.cls_head_norm(feat).transpose([0, 2, 1]).reshape(
             [0, self.in_channels, _shape[2], _shape[3]])
 
-        logits.append(self.cls_head(feat))
-
+        logits = [self.cls_head(feat)]
         if self.training:
             for idx, _head in enumerate(self.aux_heads):
                 feat = x[self.backbone_indices[idx]]
@@ -428,9 +425,7 @@ class MLAHead(nn.Layer):
 
         feats = self.mla(feats)
         if self.training:
-            for i in range(self.mla_feat_nums):
-                logits.append(self.aux_heads[i](feats[i]))
-
+            logits.extend(self.aux_heads[i](feats[i]) for i in range(self.mla_feat_nums))
         for i in range(self.mla_feat_nums):
             feats[i] = self.feat_convs[i](feats[i])
 

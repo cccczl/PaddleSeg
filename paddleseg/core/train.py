@@ -30,8 +30,8 @@ def check_logits_losses(logits_list, losses):
     len_losses = len(losses['types'])
     if len_logits != len_losses:
         raise RuntimeError(
-            'The length of logits_list should equal to the types of loss config: {} != {}.'
-            .format(len_logits, len_losses))
+            f'The length of logits_list should equal to the types of loss config: {len_logits} != {len_losses}.'
+        )
 
 
 def loss_computation(logits_list, labels, losses, edges=None):

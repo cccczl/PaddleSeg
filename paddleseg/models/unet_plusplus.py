@@ -179,10 +179,7 @@ class UNetPlusPlus(nn.Layer):
 
         output = (out_1 + out_2 + out_3 + out_4) / 4
 
-        if self.is_ds:
-            return [output]
-        else:
-            return [out_4]
+        return [output] if self.is_ds else [out_4]
 
 
 class DoubleConv(nn.Layer):
@@ -228,9 +225,6 @@ class UpSampling(nn.Layer):
 
     def forward(self, high_feature, *low_features):
         features = [self.up(high_feature)]
-        for feature in low_features:
-            features.append(feature)
+        features.extend(iter(low_features))
         cat_features = paddle.concat(features, axis=1)
-        out = self.conv(cat_features)
-
-        return out
+        return self.conv(cat_features)

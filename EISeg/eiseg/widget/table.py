@@ -15,31 +15,32 @@ class TableWidget(QtWidgets.QTableWidget):
         self.setDragDropMode(QtWidgets.QAbstractItemView.InternalMove)
 
     def dropEvent(self, event):
-        if event.source() == self:
-            rows = set([mi.row() for mi in self.selectedIndexes()])
-            targetRow = self.indexAt(event.pos()).row()
-            rows.discard(targetRow)
-            rows = sorted(rows)
-            if not rows:
-                return
-            if targetRow == -1:
-                targetRow = self.rowCount()
-            for _ in range(len(rows)):
-                self.insertRow(targetRow)
-            rowMapping = dict() # Src row to target row.
-            for idx, row in enumerate(rows):
-                if row < targetRow:
-                    rowMapping[row] = targetRow + idx
-                else:
-                    rowMapping[row + len(rows)] = targetRow + idx
-            colCount = self.columnCount()
-            for srcRow, tgtRow in sorted(rowMapping.items()):
-                for col in range(0, colCount):
-                    self.setItem(tgtRow, col, self.takeItem(srcRow, col))
-            for row in reversed(sorted(rowMapping.keys())):
-                self.removeRow(row)
-            event.accept()
+        if event.source() != self:
             return
+        rows = {mi.row() for mi in self.selectedIndexes()}
+        targetRow = self.indexAt(event.pos()).row()
+        rows.discard(targetRow)
+        rows = sorted(rows)
+        if not rows:
+            return
+        if targetRow == -1:
+            targetRow = self.rowCount()
+        for _ in range(len(rows)):
+            self.insertRow(targetRow)
+        rowMapping = {}
+        for idx, row in enumerate(rows):
+            if row < targetRow:
+                rowMapping[row] = targetRow + idx
+            else:
+                rowMapping[row + len(rows)] = targetRow + idx
+        colCount = self.columnCount()
+        for srcRow, tgtRow in sorted(rowMapping.items()):
+            for col in range(colCount):
+                self.setItem(tgtRow, col, self.takeItem(srcRow, col))
+        for row in reversed(sorted(rowMapping.keys())):
+            self.removeRow(row)
+        event.accept()
+        return
 
     def drop_on(self, event):
         index = self.indexAt(event.pos())

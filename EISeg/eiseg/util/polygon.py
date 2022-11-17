@@ -25,18 +25,15 @@ def get_polygon(label, sample=2):
             # 判断自己，如果是子对象就不管自己是谁
             if hierarchy[2] == -1:
                 own = None
+            elif hierarchy[0] == -1 and hierarchy[1] == -1:
+                own = 0
+            elif hierarchy[0] != -1 and hierarchy[1] == -1:
+                own = hierarchy[0] - 1
             else:
-                if hierarchy[0] == -1 and hierarchy[1] == -1:
-                    own = 0
-                elif hierarchy[0] != -1 and hierarchy[1] == -1:
-                    own = hierarchy[0] - 1
-                else:
-                    own = hierarchy[1] + 1
+                own = hierarchy[1] + 1
             rela = (own,  # own
                     hierarchy[-1] if hierarchy[-1] != -1 else None)  # parent
-            polygon = []
-            for p in out:
-                polygon.append(p[0])
+            polygon = [p[0] for p in out]
             polygons.append(polygon)  # 边界
             relas.append(rela)  # 关系
         for i in range(len(relas)):
@@ -56,8 +53,7 @@ def get_polygon(label, sample=2):
                         polygons[j].extend(polygons[i])
                         polygons[j].append(polygons[i][0])  # 闭合
                         polygons[i] = None
-        polygons = list(filter(None, polygons))  # 清除加到外圈的内圈多边形
-        return polygons
+        return list(filter(None, polygons))
     else:
         print("没有标签范围，无法生成边界")
         return None

@@ -110,9 +110,7 @@ class PanopticDeepLab(nn.Layer):
         logit_dict = self.head(feat_list)
         results = self._upsample_predictions(logit_dict, x.shape[-2:])
 
-        # return results
-        logit_list = [results['semantic'], results['center'], results['offset']]
-        return logit_list
+        return [results['semantic'], results['center'], results['offset']]
         # return [results['semantic']]
 
     def init_weight(self):
@@ -175,15 +173,10 @@ class PanopticDeepLabHead(nn.Layer):
             class_key=kwargs['instance_class_key'])
 
     def forward(self, features):
-        # pred = OrdereDict()
-        pred = {}
-
         # Semantic branch
         semantic = self.semantic_decoder(features)
         semantic = self.semantic_head(semantic)
-        for key in semantic.keys():
-            pred[key] = semantic[key]
-
+        pred = {key: semantic[key] for key in semantic.keys()}
         # Instance branch
         instance = self.instance_decoder(features)
         instance = self.instance_head(instance)
@@ -343,8 +336,9 @@ class SinglePanopticDeepLabDecoder(nn.Layer):
         self.decoder_stage = len(low_level_channels_projects)
         if self.decoder_stage != len(self.backbone_indices) - 1:
             raise ValueError(
-                "len(low_level_channels_projects) != len(backbone_indices) - 1, they are {} and {}"
-                .format(low_level_channels_projects, backbone_indices))
+                f"len(low_level_channels_projects) != len(backbone_indices) - 1, they are {low_level_channels_projects} and {backbone_indices}"
+            )
+
         self.align_corners = align_corners
 
         # Transform low-level feature
@@ -409,20 +403,19 @@ class SinglePanopticDeepLabHead(nn.Layer):
         self.num_head = len(num_classes)
         if self.num_head != len(class_key):
             raise ValueError(
-                "len(num_classes) != len(class_key), they are {} and {}".format(
-                    num_classes, class_key))
+                f"len(num_classes) != len(class_key), they are {num_classes} and {class_key}"
+            )
 
-        classifier = []
-        for i in range(self.num_head):
-            classifier.append(
-                nn.Sequential(
-                    SeparableConvBNReLU(
-                        decoder_channels,
-                        head_channels,
-                        5,
-                        padding=2,
-                        bias_attr=False),
-                    nn.Conv2D(head_channels, num_classes[i], 1)))
+
+        classifier = [
+            nn.Sequential(
+                SeparableConvBNReLU(
+                    decoder_channels, head_channels, 5, padding=2, bias_attr=False
+                ),
+                nn.Conv2D(head_channels, num_classes[i], 1),
+            )
+            for i in range(self.num_head)
+        ]
 
         self.classifier = nn.LayerList(classifier)
         self.class_key = class_key

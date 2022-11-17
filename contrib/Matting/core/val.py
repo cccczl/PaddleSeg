@@ -48,7 +48,7 @@ def reverse_transform(alpha, trans_info):
             h, w = item[1][0], item[1][1]
             alpha = alpha[:, :, 0:h, 0:w]
         else:
-            raise Exception("Unexpected info '{}' in im_info".format(item[0]))
+            raise Exception(f"Unexpected info '{item[0]}' in im_info")
     return alpha
 
 
@@ -61,11 +61,11 @@ def evaluate(model,
     model.eval()
     nranks = paddle.distributed.ParallelEnv().nranks
     local_rank = paddle.distributed.ParallelEnv().local_rank
-    if nranks > 1:
-        # Initialize parallel environment if not done.
-        if not paddle.distributed.parallel.parallel_helper._is_parallel_ctx_initialized(
-        ):
-            paddle.distributed.init_parallel_env()
+    if (
+        nranks > 1
+        and not paddle.distributed.parallel.parallel_helper._is_parallel_ctx_initialized()
+    ):
+        paddle.distributed.init_parallel_env()
 
     loader = paddle.io.DataLoader(
         eval_dataset,
@@ -81,8 +81,9 @@ def evaluate(model,
 
     if print_detail:
         logger.info(
-            "Start evaluating (total_samples: {}, total_iters: {})...".format(
-                len(eval_dataset), total_iters))
+            f"Start evaluating (total_samples: {len(eval_dataset)}, total_iters: {total_iters})..."
+        )
+
     progbar_val = progbar.Progbar(target=total_iters, verbose=1)
     reader_cost_averager = TimeAverager()
     batch_cost_averager = TimeAverager()

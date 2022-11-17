@@ -102,7 +102,9 @@ class BottleneckBlock(nn.Layer):
                 out_channels=out_channels * 4,
                 kernel_size=1,
                 stride=1,
-                is_vd_mode=False if if_first or stride == 1 else True)
+                is_vd_mode=not if_first and stride != 1,
+            )
+
 
         self.shortcut = shortcut
 
@@ -120,11 +122,7 @@ class BottleneckBlock(nn.Layer):
         conv1 = self.conv1(y)
         conv2 = self.conv2(conv1)
 
-        if self.shortcut:
-            short = inputs
-        else:
-            short = self.short(inputs)
-
+        short = inputs if self.shortcut else self.short(inputs)
         y = paddle.add(x=short, y=conv2)
         y = F.relu(y)
         return y
@@ -157,7 +155,9 @@ class BasicBlock(nn.Layer):
                 out_channels=out_channels,
                 kernel_size=1,
                 stride=1,
-                is_vd_mode=False if if_first else True)
+                is_vd_mode=not if_first,
+            )
+
 
         self.shortcut = shortcut
 
@@ -165,10 +165,7 @@ class BasicBlock(nn.Layer):
         y = self.conv0(inputs)
         conv1 = self.conv1(y)
 
-        if self.shortcut:
-            short = inputs
-        else:
-            short = self.short(inputs)
+        short = inputs if self.shortcut else self.short(inputs)
         y = paddle.add(x=short, y=conv1)
         y = F.relu(y)
 
@@ -202,13 +199,14 @@ class ResNet_vd(nn.Layer):
         self.conv1_logit = None  # for gscnn shape stream
         self.layers = layers
         supported_layers = [18, 34, 50, 101, 152, 200]
-        assert layers in supported_layers, \
-            "supported layers are {} but input layer is {}".format(
-                supported_layers, layers)
+        assert (
+            layers in supported_layers
+        ), f"supported layers are {supported_layers} but input layer is {layers}"
+
 
         if layers == 18:
             depth = [2, 2, 2, 2]
-        elif layers == 34 or layers == 50:
+        elif layers in [34, 50]:
             depth = [3, 4, 6, 3]
         elif layers == 101:
             depth = [3, 4, 23, 3]
@@ -226,11 +224,11 @@ class ResNet_vd(nn.Layer):
         self.feat_channels = [64] + self.feat_channels
 
         dilation_dict = None
-        if output_stride == 8:
-            dilation_dict = {2: 2, 3: 4}
-        elif output_stride == 16:
+        if output_stride == 16:
             dilation_dict = {3: 2}
 
+        elif output_stride == 8:
+            dilation_dict = {2: 2, 3: 4}
         self.conv1_1 = ConvBNLayer(
             in_channels=input_channels,
             out_channels=32,
@@ -260,11 +258,11 @@ class ResNet_vd(nn.Layer):
                 for i in range(depth[block]):
                     if layers in [101, 152] and block == 2:
                         if i == 0:
-                            conv_name = "res" + str(block + 2) + "a"
+                            conv_name = f"res{str(block + 2)}a"
                         else:
-                            conv_name = "res" + str(block + 2) + "b" + str(i)
+                            conv_name = f"res{str(block + 2)}b{str(i)}"
                     else:
-                        conv_name = "res" + str(block + 2) + chr(97 + i)
+                        conv_name = f"res{str(block + 2)}{chr(97 + i)}"
 
                     ###############################################################################
                     # Add dilation rate for some segmentation tasks, if dilation_dict is not None.
@@ -297,7 +295,7 @@ class ResNet_vd(nn.Layer):
                 shortcut = False
                 block_list = []
                 for i in range(depth[block]):
-                    conv_name = "res" + str(block + 2) + chr(97 + i)
+                    conv_name = f"res{str(block + 2)}{chr(97 + i)}"
                     basic_block = self.add_sublayer(
                         'bb_%d_%d' % (block, i),
                         BasicBlock(
@@ -315,12 +313,10 @@ class ResNet_vd(nn.Layer):
         self.init_weight()
 
     def forward(self, inputs):
-        feat_list = []
         y = self.conv1_1(inputs)
         y = self.conv1_2(y)
         y = self.conv1_3(y)
-        feat_list.append(y)
-
+        feat_list = [y]
         y = self.pool2d_max(y)
 
         # A feature list saves the output feature map of each stage.
@@ -337,32 +333,26 @@ class ResNet_vd(nn.Layer):
 
 @manager.BACKBONES.add_component
 def ResNet18_vd(**args):
-    model = ResNet_vd(layers=18, **args)
-    return model
+    return ResNet_vd(layers=18, **args)
 
 
 def ResNet34_vd(**args):
-    model = ResNet_vd(layers=34, **args)
-    return model
+    return ResNet_vd(layers=34, **args)
 
 
 @manager.BACKBONES.add_component
 def ResNet50_vd(**args):
-    model = ResNet_vd(layers=50, **args)
-    return model
+    return ResNet_vd(layers=50, **args)
 
 
 @manager.BACKBONES.add_component
 def ResNet101_vd(**args):
-    model = ResNet_vd(layers=101, **args)
-    return model
+    return ResNet_vd(layers=101, **args)
 
 
 def ResNet152_vd(**args):
-    model = ResNet_vd(layers=152, **args)
-    return model
+    return ResNet_vd(layers=152, **args)
 
 
 def ResNet200_vd(**args):
-    model = ResNet_vd(layers=200, **args)
-    return model
+    return ResNet_vd(layers=200, **args)

@@ -54,7 +54,7 @@ class LabelList(object):
         labelList = []
         for lab in labels:
             lab = lab.replace("\n", "").strip(" ").split(" ")
-            if len(lab) != 2 and len(lab) != 5:
+            if len(lab) not in [2, 5]:
                 print(f"{lab} 标签不合法")
                 continue
             label = Label(self.toint(lab[0]), str(lab[1]), self.toint(lab[2:]))
@@ -89,7 +89,4 @@ class LabelList(object):
 
     @property
     def colors(self):
-        cols = []
-        for lab in self.labelList:
-            cols.append(lab.color)
-        return cols
+        return [lab.color for lab in self.labelList]

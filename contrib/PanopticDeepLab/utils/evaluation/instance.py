@@ -144,12 +144,8 @@ class InstanceEvaluator(object):
         ap = self.cal_ap()
         map = self.cal_map()
 
-        res = {}
-        res["AP"] = [{i: ap[i] * 100} for i in self.thing_list]
-        res["mAP"] = 100 * map
-
-        results = OrderedDict({"ins_seg": res})
-        return results
+        res = {"AP": [{i: ap[i] * 100} for i in self.thing_list], "mAP": 100 * map}
+        return OrderedDict({"ins_seg": res})
 
     def cal_ap(self):
         """
@@ -261,8 +257,7 @@ class InstanceEvaluator(object):
         pred_instances = defaultdict(list)
         gt_instances = defaultdict(list)
 
-        gt_inst_count = 0
-        for gt in gts:
+        for gt_inst_count, gt in enumerate(gts):
             label, mask = gt
             gt_instance = defaultdict(list)
             gt_instance['inst_id'] = gt_inst_count
@@ -270,10 +265,7 @@ class InstanceEvaluator(object):
             gt_instance['pixel_count'] = np.count_nonzero(mask)
             gt_instance['mask'] = mask
             gt_instances[label].append(gt_instance)
-            gt_inst_count += 1
-
-        pred_inst_count = 0
-        for pred in preds:
+        for pred_inst_count, pred in enumerate(preds):
             label, conf, mask = pred
             pred_instance = defaultdict(list)
             pred_instance['label'] = label
@@ -302,7 +294,6 @@ class InstanceEvaluator(object):
                         pred_copy)
 
             pred_instance['matched_gt'] = matched_gt
-            pred_inst_count += 1
             pred_instances[label].append(pred_instance)
 
         return pred_instances, gt_instances

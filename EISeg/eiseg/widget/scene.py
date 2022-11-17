@@ -45,24 +45,15 @@ class AnnotationScene(QtWidgets.QGraphicsScene):
 
     @property
     def item_hovering(self):
-        for poly in self.polygon_items:
-            if poly.item_hovering:
-                return True
-        return False
+        return any(poly.item_hovering for poly in self.polygon_items)
 
     @property
     def polygon_hovering(self):
-        for poly in self.polygon_items:
-            if poly.polygon_hovering:
-                return True
-        return False
+        return any(poly.polygon_hovering for poly in self.polygon_items)
 
     @property
     def line_hovering(self):
-        for poly in self.polygon_items:
-            if poly.line_hovering:
-                return True
-        return False
+        return any(poly.line_hovering for poly in self.polygon_items)
 
     @property
     def hovering(self):

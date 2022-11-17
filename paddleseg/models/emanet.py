@@ -191,7 +191,7 @@ class EMAU(nn.Layer):
         mu = paddle.tile(self.mu, [x_shape[0], 1, 1])
 
         with paddle.no_grad():
-            for i in range(self.stage_num):
+            for _ in range(self.stage_num):
                 x_t = paddle.transpose(x, [0, 2, 1])
                 z = paddle.bmm(x_t, mu)
                 z = F.softmax(z, axis=2)

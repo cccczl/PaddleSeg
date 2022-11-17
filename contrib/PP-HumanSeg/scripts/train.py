@@ -29,8 +29,8 @@ def check_logits_losses(logits_list, losses):
     len_losses = len(losses['types'])
     if len_logits != len_losses:
         raise RuntimeError(
-            'The length of logits_list should equal to the types of loss config: {} != {}.'
-            .format(len_logits, len_losses))
+            f'The length of logits_list should equal to the types of loss config: {len_logits} != {len_losses}.'
+        )
 
 
 def loss_computation(logits_list, labels, losses, edges=None):
@@ -139,10 +139,7 @@ def train(model,
             if len(data) == 3:
                 edges = data[2].astype('int64')
 
-            if nranks > 1:
-                logits_list = ddp_model(images)
-            else:
-                logits_list = model(images)
+            logits_list = ddp_model(images) if nranks > 1 else model(images)
             loss_list = loss_computation(
                 logits_list=logits_list,
                 labels=labels,
@@ -185,9 +182,9 @@ def train(model,
                     if len(avg_loss_list) > 1:
                         avg_loss_dict = {}
                         for i, value in enumerate(avg_loss_list):
-                            avg_loss_dict['loss_' + str(i)] = value
+                            avg_loss_dict[f'loss_{str(i)}'] = value
                         for key, value in avg_loss_dict.items():
-                            log_tag = 'Train/' + key
+                            log_tag = f'Train/{key}'
                             log_writer.add_scalar(log_tag, value, iter)
 
                     log_writer.add_scalar('Train/lr', lr, iter)

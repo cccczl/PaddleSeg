@@ -142,7 +142,6 @@ class GCNetHead(nn.Layer):
         self.enable_auxiliary_loss = enable_auxiliary_loss
 
     def forward(self, feat_list):
-        logit_list = []
         x = feat_list[self.backbone_indices[1]]
 
         output = self.conv_bn_relu1(x)
@@ -154,8 +153,7 @@ class GCNetHead(nn.Layer):
 
         output = self.dropout(output)
         logit = self.conv(output)
-        logit_list.append(logit)
-
+        logit_list = [logit]
         if self.enable_auxiliary_loss:
             low_level_feat = feat_list[self.backbone_indices[0]]
             auxiliary_logit = self.auxlayer(low_level_feat)
@@ -218,5 +216,4 @@ class GlobalContextBlock(nn.Layer):
     def forward(self, x):
         context = self.global_context_block(x)
         channel_add_term = self.channel_add_conv(context)
-        out = x + channel_add_term
-        return out
+        return x + channel_add_term

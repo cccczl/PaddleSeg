@@ -91,8 +91,7 @@ class AttentionUNet(nn.Layer):
         d2 = self.up_conv2(d2)
 
         logit = self.conv_1x1(d2)
-        logit_list = [logit]
-        return logit_list
+        return [logit]
 
     def init_weight(self):
         if self.pretrained is not None:
@@ -121,8 +120,7 @@ class AttentionBlock(nn.Layer):
         x1 = self.W_x(x)
         psi = self.relu(g1 + x1)
         psi = self.psi(psi)
-        res = x * psi
-        return res
+        return x * psi
 
 
 class UpConv(nn.Layer):
@@ -150,8 +148,7 @@ class Encoder(nn.Layer):
         ])
 
     def down_sampling(self, in_channels, out_channels):
-        modules = []
-        modules.append(nn.MaxPool2D(kernel_size=2, stride=2))
+        modules = [nn.MaxPool2D(kernel_size=2, stride=2)]
         modules.append(layers.ConvBNReLU(in_channels, out_channels, 3))
         modules.append(layers.ConvBNReLU(out_channels, out_channels, 3))
         return nn.Sequential(*modules)

@@ -73,7 +73,7 @@ def reverse_transform(pred, ori_shape, transforms):
             h, w = item[1][0], item[1][1]
             pred = pred[:, :, 0:h, 0:w]
         else:
-            raise Exception("Unexpected info '{}' in im_info".format(item[0]))
+            raise Exception(f"Unexpected info '{item[0]}' in im_info")
     return pred
 
 
@@ -146,12 +146,11 @@ def inference(model,
         logit = (logits + logits_hard) / 2
         # logit = logit_hard
 
-    if ori_shape is not None:
-        pred = paddle.argmax(logit, axis=1, keepdim=True, dtype='int32')
-        pred = reverse_transform(pred, ori_shape, transforms)
-        return pred
-    else:
+    if ori_shape is None:
         return logit
+    pred = paddle.argmax(logit, axis=1, keepdim=True, dtype='int32')
+    pred = reverse_transform(pred, ori_shape, transforms)
+    return pred
 
 
 def aug_inference(model,
@@ -187,8 +186,9 @@ def aug_inference(model,
         scales = [scales]
     elif not isinstance(scales, (tuple, list)):
         raise TypeError(
-            '`scales` expects float/tuple/list type, but received {}'.format(
-                type(scales)))
+            f'`scales` expects float/tuple/list type, but received {type(scales)}'
+        )
+
     final_logit = 0
     h_input, w_input = im.shape[-2], im.shape[-1]
     flip_comb = flip_combination(flip_horizontal, flip_vertical)

@@ -25,7 +25,7 @@ def save_checkpoint(net, checkpoints_path, epoch=None, prefix='', verbose=True, 
     checkpoint_path = checkpoints_path / checkpoint_name
 
     net = net.module if multi_gpu else net
-   
+
     #model_state = {'state_dict': net.state_dict(),'config': net.__dict__}
     paddle.save(net.state_dict(), checkpoint_path)
 

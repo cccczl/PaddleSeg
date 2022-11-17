@@ -111,18 +111,43 @@ class ResNetV1b(nn.Layer):
                  avg_down=False, final_drop=0.0, norm_layer=nn.BatchNorm2D):
         self.inplanes = stem_width*2 if deep_stem else 64
         super(ResNetV1b, self).__init__()
-        if not deep_stem:
-            self.conv1 = nn.Conv2D(3, 64, kernel_size=7, stride=2, padding=3, bias_attr=False)
-        else:
-            self.conv1 = nn.Sequential(
-                nn.Conv2D(3, stem_width, kernel_size=3, stride=2, padding=1, bias_attr=False),
+        self.conv1 = (
+            nn.Sequential(
+                nn.Conv2D(
+                    3,
+                    stem_width,
+                    kernel_size=3,
+                    stride=2,
+                    padding=1,
+                    bias_attr=False,
+                ),
                 norm_layer(stem_width),
                 nn.ReLU(),
-                nn.Conv2D(stem_width, stem_width, kernel_size=3, stride=1, padding=1, bias_attr=False),
+                nn.Conv2D(
+                    stem_width,
+                    stem_width,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1,
+                    bias_attr=False,
+                ),
                 norm_layer(stem_width),
                 nn.ReLU(),
-                nn.Conv2D(stem_width, 2*stem_width, kernel_size=3, stride=1, padding=1, bias_attr=False)
+                nn.Conv2D(
+                    stem_width,
+                    2 * stem_width,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1,
+                    bias_attr=False,
+                ),
             )
+            if deep_stem
+            else nn.Conv2D(
+                3, 64, kernel_size=7, stride=2, padding=3, bias_attr=False
+            )
+        )
+
         self.bn1 = norm_layer(self.inplanes)
         self.relu = nn.ReLU()
         self.maxpool = nn.MaxPool2D(3, stride=2, padding=1)
@@ -181,12 +206,19 @@ class ResNetV1b(nn.Layer):
             layers.append(block(self.inplanes, planes, stride, dilation=2, downsample=downsample,
                                 previous_dilation=dilation, norm_layer=norm_layer))
         else:
-            raise RuntimeError("=> unknown dilation size: {}".format(dilation))
+            raise RuntimeError(f"=> unknown dilation size: {dilation}")
 
         self.inplanes = planes * block.expansion
-        for _ in range(1, blocks):
-            layers.append(block(self.inplanes, planes, dilation=dilation,
-                                previous_dilation=dilation, norm_layer=norm_layer))
+        layers.extend(
+            block(
+                self.inplanes,
+                planes,
+                dilation=dilation,
+                previous_dilation=dilation,
+                norm_layer=norm_layer,
+            )
+            for _ in range(1, blocks)
+        )
 
         return nn.Sequential(*layers)
 

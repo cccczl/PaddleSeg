@@ -114,11 +114,9 @@ def optic_flow_process(cur_gray, scoremap, prev_gray, pre_cfd, disflow,
             disflow.setFinestScale(2)
         else:
             disflow.setFinestScale(3)
-        fusion_cfd = cur_cfd
+        return cur_cfd
     else:
         weights = np.ones((h, w), np.float32) * 0.3
         track_cfd, is_track, weights = human_seg_tracking(
             prev_gray, cur_gray, pre_cfd, weights, disflow)
-        fusion_cfd = human_seg_track_fuse(track_cfd, cur_cfd, weights, is_track)
-
-    return fusion_cfd
+        return human_seg_track_fuse(track_cfd, cur_cfd, weights, is_track)

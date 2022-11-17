@@ -78,7 +78,7 @@ class EG1800(Dataset):
                 savepath=savepath,
                 extrapath=savepath,
                 extraname=extraname)
-            
+
         if mode == 'train':
             path = os.path.join(dataset_root, 'eg1800_train.txt')
         else:
@@ -95,7 +95,6 @@ class EG1800(Dataset):
         self.file_list = [[
             img_path, label_path
         ] for img_path, label_path in zip(img_files, label_files)]
-        pass
 
     def __getitem__(self, item):
         image_path, label_path = self.file_list[item]
@@ -130,7 +129,4 @@ class EG1800(Dataset):
             label, radius=4, num_classes=self.num_classes)
         edge_mask = np.transpose(edge_mask, [1, 2, 0]).squeeze(axis=-1)
         im = np.concatenate([im_aug, im])
-        if self.mode == "train":
-            return im, label, edge_mask
-        else:
-            return im, label
+        return (im, label, edge_mask) if self.mode == "train" else (im, label)

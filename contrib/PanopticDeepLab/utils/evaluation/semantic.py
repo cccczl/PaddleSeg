@@ -74,11 +74,11 @@ class SemanticEvaluator:
         fiou = np.sum(iou * class_weights)
         pacc = np.sum(tp) / np.sum(pos_gt)
 
-        res = {}
-        res["mIoU"] = 100 * miou
-        res["fwIoU"] = 100 * fiou
-        res["mACC"] = 100 * macc
-        res["pACC"] = 100 * pacc
+        res = {
+            "mIoU": 100 * miou,
+            "fwIoU": 100 * fiou,
+            "mACC": 100 * macc,
+            "pACC": 100 * pacc,
+        }
 
-        results = OrderedDict({"sem_seg": res})
-        return results
+        return OrderedDict({"sem_seg": res})

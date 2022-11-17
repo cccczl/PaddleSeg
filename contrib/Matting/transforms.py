@@ -70,9 +70,8 @@ class LoadImages:
             if isinstance(data[key], str):
                 data[key] = cv2.imread(data[key], cv2.IMREAD_UNCHANGED)
             # if alpha and trimap has 3 channels, extract one.
-            if key in ['alpha', 'trimap']:
-                if len(data[key].shape) > 2:
-                    data[key] = data[key][:, :, 0]
+            if key in ['alpha', 'trimap'] and len(data[key].shape) > 2:
+                data[key] = data[key][:, :, 0]
 
         if self.to_rgb:
             data['img'] = cv2.cvtColor(data['img'], cv2.COLOR_BGR2RGB)
@@ -87,20 +86,21 @@ class LoadImages:
 @manager.TRANSFORMS.add_component
 class Resize:
     def __init__(self, target_size=(512, 512)):
-        if isinstance(target_size, list) or isinstance(target_size, tuple):
-            if len(target_size) != 2:
-                raise ValueError(
-                    '`target_size` should include 2 elements, but it is {}'.
-                    format(target_size))
-        else:
+        if not isinstance(target_size, (list, tuple)):
             raise TypeError(
-                "Type of `target_size` is invalid. It should be list or tuple, but it is {}"
-                .format(type(target_size)))
+                f"Type of `target_size` is invalid. It should be list or tuple, but it is {type(target_size)}"
+            )
+
+
+        if len(target_size) != 2:
+            raise ValueError(
+                f'`target_size` should include 2 elements, but it is {target_size}'
+            )
 
         self.target_size = target_size
 
     def __call__(self, data):
-        data['trans_info'].append(('resize', data['img'].shape[0:2]))
+        data['trans_info'].append(('resize', data['img'].shape[:2]))
         data['img'] = functional.resize(data['img'], self.target_size)
         for key in data.get('gt_fields', []):
             data[key] = functional.resize(data[key], self.target_size)
@@ -120,7 +120,7 @@ class ResizeByLong:
         self.long_size = long_size
 
     def __call__(self, data):
-        data['trans_info'].append(('resize', data['img'].shape[0:2]))
+        data['trans_info'].append(('resize', data['img'].shape[:2]))
         data['img'] = functional.resize_long(data['img'], self.long_size)
         for key in data.get('gt_fields', []):
             data[key] = functional.resize_long(data[key], self.long_size)
@@ -140,7 +140,7 @@ class ResizeByShort:
         self.short_size = short_size
 
     def __call__(self, data):
-        data['trans_info'].append(('resize', data['img'].shape[0:2]))
+        data['trans_info'].append(('resize', data['img'].shape[:2]))
         data['img'] = functional.resize_short(data['img'], self.short_size)
         for key in data.get('gt_fields', []):
             data[key] = functional.resize_short(data[key], self.short_size)
@@ -157,9 +157,9 @@ class ResizeToIntMult:
         self.mult_int = mult_int
 
     def __call__(self, data):
-        data['trans_info'].append(('resize', data['img'].shape[0:2]))
+        data['trans_info'].append(('resize', data['img'].shape[:2]))
 
-        h, w = data['img'].shape[0:2]
+        h, w = data['img'].shape[:2]
         rw = w - w % 32
         rh = h - h % 32
         data['img'] = functional.resize(data['img'], (rw, rh))
@@ -187,12 +187,10 @@ class Normalize:
         self.std = std
         if not (isinstance(self.mean, (list, tuple))
                 and isinstance(self.std, (list, tuple))):
-            raise ValueError(
-                "{}: input type is invalid. It should be list or tuple".format(
-                    self))
+            raise ValueError(f"{self}: input type is invalid. It should be list or tuple")
         from functools import reduce
         if reduce(lambda x, y: x * y, self.std) == 0:
-            raise ValueError('{}: std is invalid!'.format(self))
+            raise ValueError(f'{self}: std is invalid!')
 
     def __call__(self, data):
         mean = np.array(self.mean)[np.newaxis, np.newaxis, :]
@@ -241,13 +239,8 @@ class RandomCropByAlpha:
             start_h = max(0, center_h - delta_h)
             start_w = max(0, center_w - delta_w)
         else:
-            start_h = 0
-            start_w = 0
-            if img_h > crop_h:
-                start_h = np.random.randint(img_h - crop_h + 1)
-            if img_w > crop_w:
-                start_w = np.random.randint(img_w - crop_w + 1)
-
+            start_h = np.random.randint(img_h - crop_h + 1) if img_h > crop_h else 0
+            start_w = np.random.randint(img_w - crop_w + 1) if img_w > crop_w else 0
         end_h = min(img_h, start_h + crop_h)
         end_w = min(img_w, start_w + crop_w)
 
@@ -275,15 +268,10 @@ class RandomCrop:
     def __call__(self, data):
         idex = np.random.randint(low=0, high=len(self.crop_size))
         crop_w, crop_h = self.crop_size[idex]
-        img_h, img_w = data['img'].shape[0:2]
+        img_h, img_w = data['img'].shape[:2]
 
-        start_h = 0
-        start_w = 0
-        if img_h > crop_h:
-            start_h = np.random.randint(img_h - crop_h + 1)
-        if img_w > crop_w:
-            start_w = np.random.randint(img_w - crop_w + 1)
-
+        start_h = np.random.randint(img_h - crop_h + 1) if img_h > crop_h else 0
+        start_w = np.random.randint(img_w - crop_w + 1) if img_w > crop_w else 0
         end_h = min(img_h, start_h + crop_h)
         end_w = min(img_w, start_w + crop_w)
 
@@ -313,21 +301,25 @@ class LimitLong:
     """
 
     def __init__(self, max_long=None, min_long=None):
-        if max_long is not None:
-            if not isinstance(max_long, int):
-                raise TypeError(
-                    "Type of `max_long` is invalid. It should be int, but it is {}"
-                    .format(type(max_long)))
-        if min_long is not None:
-            if not isinstance(min_long, int):
-                raise TypeError(
-                    "Type of `min_long` is invalid. It should be int, but it is {}"
-                    .format(type(min_long)))
-        if (max_long is not None) and (min_long is not None):
-            if min_long > max_long:
-                raise ValueError(
-                    '`max_long should not smaller than min_long, but they are {} and {}'
-                    .format(max_long, min_long))
+        if max_long is not None and not isinstance(max_long, int):
+            raise TypeError(
+                f"Type of `max_long` is invalid. It should be int, but it is {type(max_long)}"
+            )
+
+        if min_long is not None and not isinstance(min_long, int):
+            raise TypeError(
+                f"Type of `min_long` is invalid. It should be int, but it is {type(min_long)}"
+            )
+
+        if (
+            (max_long is not None)
+            and (min_long is not None)
+            and min_long > max_long
+        ):
+            raise ValueError(
+                f'`max_long should not smaller than min_long, but they are {max_long} and {min_long}'
+            )
+
         self.max_long = max_long
         self.min_long = min_long
 
@@ -341,7 +333,7 @@ class LimitLong:
             target = self.min_long
 
         if target != long_edge:
-            data['trans_info'].append(('resize', data['img'].shape[0:2]))
+            data['trans_info'].append(('resize', data['img'].shape[:2]))
             data['img'] = functional.resize_long(data['img'], target)
             for key in data.get('gt_fields', []):
                 data[key] = functional.resize_long(data[key], target)
@@ -389,18 +381,16 @@ class RandomBlur:
             n = 1
         else:
             n = int(1.0 / self.prob)
-        if n > 0:
-            if np.random.randint(0, n) == 0:
-                radius = np.random.randint(3, 10)
-                if radius % 2 != 1:
-                    radius = radius + 1
-                if radius > 9:
-                    radius = 9
-                data['img'] = cv2.GaussianBlur(data['img'], (radius, radius), 0,
-                                               0)
-                for key in data.get('gt_fields', []):
-                    data[key] = cv2.GaussianBlur(data[key], (radius, radius), 0,
-                                                 0)
+        if n > 0 and np.random.randint(0, n) == 0:
+            radius = np.random.randint(3, 10)
+            if radius % 2 != 1:
+                radius = radius + 1
+            radius = min(radius, 9)
+            data['img'] = cv2.GaussianBlur(data['img'], (radius, radius), 0,
+                                           0)
+            for key in data.get('gt_fields', []):
+                data[key] = cv2.GaussianBlur(data[key], (radius, radius), 0,
+                                             0)
         return data
 
 
@@ -479,27 +469,26 @@ class RandomDistort:
 
         im = data['img'].astype('uint8')
         im = Image.fromarray(im)
-        for id in range(len(ops)):
-            params = params_dict[ops[id].__name__]
+        for op in ops:
+            params = params_dict[op.__name__]
             params['im'] = im
-            prob = prob_dict[ops[id].__name__]
+            prob = prob_dict[op.__name__]
             if np.random.uniform(0, 1) < prob:
-                im = ops[id](**params)
+                im = op(**params)
         data['img'] = np.asarray(im)
 
         for key in data.get('gt_fields', []):
             if key in ['alpha', 'trimap']:
                 continue
-            else:
-                im = data[key].astype('uint8')
-                im = Image.fromarray(im)
-                for id in range(len(ops)):
-                    params = params_dict[ops[id].__name__]
-                    params['im'] = im
-                    prob = prob_dict[ops[id].__name__]
-                    if np.random.uniform(0, 1) < prob:
-                        im = ops[id](**params)
-                data[key] = np.asarray(im)
+            im = data[key].astype('uint8')
+            im = Image.fromarray(im)
+            for op_ in ops:
+                params = params_dict[op_.__name__]
+                params['im'] = im
+                prob = prob_dict[op_.__name__]
+                if np.random.uniform(0, 1) < prob:
+                    im = op_(**params)
+            data[key] = np.asarray(im)
         return data
 
 
@@ -509,8 +498,7 @@ if __name__ == "__main__":
     fg_path = '/ssd1/home/chenguowei01/github/PaddleSeg/contrib/matting/data/matting/human_matting/Distinctions-646/train/fg/13(2).png'
     alpha_path = fg_path.replace('fg', 'alpha')
     bg_path = '/ssd1/home/chenguowei01/github/PaddleSeg/contrib/matting/data/matting/human_matting/bg/unsplash_bg/attic/photo-1443884590026-2e4d21aee71c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwxMjA3fDB8MXxzZWFyY2h8Nzh8fGF0dGljfGVufDB8fHx8MTYyOTY4MDcxNQ&ixlib=rb-1.2.1&q=80&w=400.jpg'
-    data = {}
-    data['fg'] = cv2.imread(fg_path)
+    data = {'fg': cv2.imread(fg_path)}
     data['bg'] = cv2.imread(bg_path)
     h, w, c = data['fg'].shape
     data['bg'] = cv2.resize(data['bg'], (w, h))

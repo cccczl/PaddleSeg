@@ -75,8 +75,7 @@ class MscaleOCRNet(nn.Layer):
             mode='bilinear',
             align_corners=self.align_corners)
 
-        output = [cls_out]
-        return output
+        return [cls_out]
 
     def two_scale_forward(self, x_1x):
         """
@@ -273,6 +272,6 @@ def scale_as(x, y, align_corners=False):
     scale x to the same size as y
     '''
     y_size = y.shape[2], y.shape[3]
-    x_scaled = nn.functional.interpolate(
-        x, size=y_size, mode='bilinear', align_corners=align_corners)
-    return x_scaled
+    return nn.functional.interpolate(
+        x, size=y_size, mode='bilinear', align_corners=align_corners
+    )

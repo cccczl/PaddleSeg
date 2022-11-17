@@ -63,7 +63,7 @@ class AutoNueAutolabel(paddle.io.Dataset):
                  add_val=False):
         self.dataset_root = dataset_root
         self.transforms = Compose(transforms)
-        self.file_list = list()
+        self.file_list = []
         mode = mode.lower()
         self.mode = mode
         self.num_classes = 26
@@ -71,9 +71,7 @@ class AutoNueAutolabel(paddle.io.Dataset):
         self.coarse_multiple = coarse_multiple
 
         if mode not in ['train', 'val', 'test']:
-            raise ValueError(
-                "mode should be 'train', 'val' or 'test', but got {}.".format(
-                    mode))
+            raise ValueError(f"mode should be 'train', 'val' or 'test', but got {mode}.")
 
         if self.transforms is None:
             raise ValueError("`transforms` is necessary, but it is None.")
@@ -117,8 +115,8 @@ class AutoNueAutolabel(paddle.io.Dataset):
                     img_path, label_path
                 ] for img_path, label_path in zip(img_files, label_files)]
                 self.file_list.extend(val_file_list)
-                for ii in range(len(self.file_list)):
-                    print(self.file_list[ii])
+                for file in self.file_list:
+                    print(file)
                 print(len(self.file_list))
                 self.num_files = len(self.file_list)
                 self.total_num_files = self.num_files
@@ -140,8 +138,9 @@ class AutoNueAutolabel(paddle.io.Dataset):
                 glob.glob(os.path.join(img_dir, '*', '*')))
             if len(coarse_img_files) != len(coarse_label_files):
                 raise ValueError(
-                    "The number of images = {} is not equal to the number of labels = {} in Cityscapes Autolabeling dataset."
-                    .format(len(coarse_img_files), len(coarse_label_files)))
+                    f"The number of images = {len(coarse_img_files)} is not equal to the number of labels = {len(coarse_label_files)} in Cityscapes Autolabeling dataset."
+                )
+
 
             self.coarse_file_list = [[img_path, label_path]
                                      for img_path, label_path in zip(
@@ -156,24 +155,17 @@ class AutoNueAutolabel(paddle.io.Dataset):
             # self.total_num_files = int(self.num_files * (1 + coarse_multiple))
 
     def __getitem__(self, idx):
+        image_path, label_path = self.file_list[idx]
         if self.mode == 'test':
-            image_path, label_path = self.file_list[idx]
             im, _ = self.transforms(im=image_path)
             im = im[np.newaxis, ...]
             return im, image_path
         elif self.mode == 'val':
-            image_path, label_path = self.file_list[idx]
             im, _ = self.transforms(im=image_path)
             label = np.asarray(Image.open(label_path))
             label = label[np.newaxis, :, :]
             return im, label
         else:
-            # if idx >= self.num_files:
-            #     image_path, label_path = self.coarse_file_list[idx -
-            #                                                    self.num_files]
-            # else:
-            image_path, label_path = self.file_list[idx]
-
             im, label = self.transforms(im=image_path, label=label_path)
             return im, label
 

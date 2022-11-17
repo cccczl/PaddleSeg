@@ -31,10 +31,7 @@ class GripItem(QtWidgets.QGraphicsPathItem):
 
     @property
     def size(self):
-        if not self.scene():
-            return 2
-        else:
-            return GripItem.fixedSize / self.scene().scale
+        return GripItem.fixedSize / self.scene().scale if self.scene() else 2
 
     def updateSize(self, size=2):
         size = self.size

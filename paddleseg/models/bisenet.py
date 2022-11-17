@@ -303,5 +303,4 @@ class SegHead(nn.Layer):
 
     def forward(self, x):
         conv1 = self.conv_3x3(x)
-        conv2 = self.conv_1x1(conv1)
-        return conv2
+        return self.conv_1x1(conv1)

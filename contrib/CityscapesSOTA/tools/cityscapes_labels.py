@@ -163,13 +163,10 @@ def assureSingleInstanceName(name):
     # remove group
     name = name[:-len("group")]
     # test if the new name exists
-    if not name in name2label:
+    if name not in name2label:
         return None
     # test if the new name denotes a label that actually has instances
-    if not name2label[name].hasInstances:
-        return None
-    # all good then
-    return name
+    return name if name2label[name].hasInstances else None
 
 
 #--------------------------------------------------------------------------------

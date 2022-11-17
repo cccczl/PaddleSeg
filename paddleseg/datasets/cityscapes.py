@@ -51,7 +51,7 @@ class Cityscapes(Dataset):
     def __init__(self, transforms, dataset_root, mode='train', edge=False):
         self.dataset_root = dataset_root
         self.transforms = Compose(transforms)
-        self.file_list = list()
+        self.file_list = []
         mode = mode.lower()
         self.mode = mode
         self.num_classes = self.NUM_CLASSES
@@ -59,9 +59,7 @@ class Cityscapes(Dataset):
         self.edge = edge
 
         if mode not in ['train', 'val', 'test']:
-            raise ValueError(
-                "mode should be 'train', 'val' or 'test', but got {}.".format(
-                    mode))
+            raise ValueError(f"mode should be 'train', 'val' or 'test', but got {mode}.")
 
         if self.transforms is None:
             raise ValueError("`transforms` is necessary, but it is None.")

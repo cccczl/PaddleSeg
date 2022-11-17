@@ -334,7 +334,7 @@ class InteractiveController:
             results_mask_for_vis = (
                 self.getLargestCC(results_mask_for_vis) * self.curr_label_number
             )
-        vis = draw_with_blend_and_clicks(
+        return draw_with_blend_and_clicks(
             self.image,
             mask=results_mask_for_vis,
             alpha=alpha_blend,
@@ -342,7 +342,6 @@ class InteractiveController:
             radius=click_radius,
             palette=self.palette,
         )
-        return vis
 
     def inImage(self, x: int, y: int):
         s = self.image.shape
@@ -353,8 +352,7 @@ class InteractiveController:
 
     @property
     def result_mask(self):
-        result_mask = self._result_mask.copy()
-        return result_mask
+        return self._result_mask.copy()
 
     @property
     def palette(self):

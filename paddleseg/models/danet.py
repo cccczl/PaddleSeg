@@ -178,8 +178,7 @@ class PAM(nn.Layer):
         feat = paddle.reshape(feat,
                               (0, self.in_channels, x_shape[2], x_shape[3]))
 
-        out = self.gamma * feat + x
-        return out
+        return self.gamma * feat + x
 
 
 class CAM(nn.Layer):
@@ -214,5 +213,4 @@ class CAM(nn.Layer):
         feat = paddle.bmm(sim, value)
         feat = paddle.reshape(feat, (0, self.channels, x_shape[2], x_shape[3]))
 
-        out = self.gamma * feat + x
-        return out
+        return self.gamma * feat + x

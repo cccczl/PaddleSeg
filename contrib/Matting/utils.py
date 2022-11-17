@@ -18,9 +18,12 @@ import os
 def get_files(root_path):
     res = []
     for root, dirs, files in os.walk(root_path, followlinks=True):
-        for f in files:
-            if f.endswith(('.jpg', '.png', '.jpeg', 'JPG')):
-                res.append(os.path.join(root, f))
+        res.extend(
+            os.path.join(root, f)
+            for f in files
+            if f.endswith(('.jpg', '.png', '.jpeg', 'JPG'))
+        )
+
     return res
 
 
@@ -41,12 +44,13 @@ def get_image_list(image_path):
                     line = line.strip()
                     if len(line.split()) > 1:
                         raise RuntimeError(
-                            'There should be only one image path per line in `image_path` file. Wrong line: {}'
-                            .format(line))
+                            f'There should be only one image path per line in `image_path` file. Wrong line: {line}'
+                        )
+
                     image_list.append(os.path.join(image_dir, line))
     elif os.path.isdir(image_path):
         image_dir = image_path
-        for root, dirs, files in os.walk(image_path):
+        for root, dirs, files in os.walk(image_dir):
             for f in files:
                 if '.ipynb_checkpoints' in root:
                     continue
@@ -58,7 +62,7 @@ def get_image_list(image_path):
             '`image_path` is not found. it should be an image file or a directory including images'
         )
 
-    if len(image_list) == 0:
+    if not image_list:
         raise RuntimeError('There are not image file in `image_path`')
 
     return image_list, image_dir

@@ -55,9 +55,7 @@ class MODNet(nn.Layer):
         """
         x = inputs['img']
         feat_list = self.backbone(x)
-        y = self.head(inputs=inputs, feat_list=feat_list)
-
-        return y
+        return self.head(inputs=inputs, feat_list=feat_list)
 
     def loss(self, logit_dict, label_dict, loss_func_dict=None):
         if loss_func_dict is None:
@@ -67,7 +65,6 @@ class MODNet(nn.Layer):
             loss_func_dict['fusion'].append(paddleseg.models.L1Loss())
             loss_func_dict['fusion'].append(paddleseg.models.L1Loss())
 
-        loss = {}
         # semantic loss
         semantic_gt = F.interpolate(
             label_dict['alpha'],
@@ -75,9 +72,11 @@ class MODNet(nn.Layer):
             mode='bilinear',
             align_corners=False)
         semantic_gt = self.blurer(semantic_gt)
-        #         semantic_gt.stop_gradient=True
-        loss['semantic'] = loss_func_dict['semantic'][0](logit_dict['semantic'],
-                                                         semantic_gt)
+        loss = {
+            'semantic': loss_func_dict['semantic'][0](
+                logit_dict['semantic'], semantic_gt
+            )
+        }
 
         # detail loss
         trimap = label_dict['trimap']
@@ -116,20 +115,6 @@ class MODNet(nn.Layer):
         logit_semantic.stop_gradient = True
         matte_con_sem = paddle.where(transition_mask, logit_semantic,
                                      matte_con_sem)
-        if False:
-            import cv2
-            matte_con_sem_num = matte_con_sem.numpy()
-            matte_con_sem_num = matte_con_sem_num[0].squeeze()
-            matte_con_sem_num = (matte_con_sem_num * 255).astype('uint8')
-            semantic = logit_dict['semantic'].numpy()
-            semantic = semantic[0].squeeze()
-            semantic = (semantic * 255).astype('uint8')
-            transition_mask = transition_mask.astype('uint8')
-            transition_mask = transition_mask.numpy()
-            transition_mask = (transition_mask[0].squeeze()) * 255
-            cv2.imwrite('matte_con.png', matte_con_sem_num)
-            cv2.imwrite('semantic.png', semantic)
-            cv2.imwrite('transition.png', transition_mask)
         mse_loss = paddleseg.models.MSELoss()
         loss_fusion_con_sem = mse_loss(matte_con_sem, logit_dict['semantic'])
         loss_fusion = loss_fusion_l1 + loss_fusion_comp + loss_fusion_con_sem
@@ -162,12 +147,12 @@ class MODNetHead(nn.Layer):
         pred_matte = self.f_branch(inputs['img'], lr8x, hr2x)
 
         if self.training:
-            logit_dict = {
+            return {
                 'semantic': pred_semantic,
                 'detail': pred_detail,
-                'matte': pred_matte
+                'matte': pred_matte,
             }
-            return logit_dict
+
         else:
             return pred_matte
 
@@ -208,9 +193,7 @@ class FusionBranch(nn.Layer):
         f = F.interpolate(
             f2x, scale_factor=2, mode='bilinear', align_corners=False)
         f = self.conv_f(paddle.concat((f, img), axis=1))
-        pred_matte = F.sigmoid(f)
-
-        return pred_matte
+        return F.sigmoid(f)
 
 
 class HRBranch(nn.Layer):
@@ -458,10 +441,10 @@ class GaussianBlurLayer(nn.Layer):
             paddle.Tensor: Blurred version of the input
         """
 
-        if not len(list(x.shape)) == 4:
+        if len(list(x.shape)) != 4:
             print('\'GaussianBlurLayer\' requires a 4D tensor as input\n')
             exit()
-        elif not x.shape[1] == self.channels:
+        elif x.shape[1] != self.channels:
             print('In \'GaussianBlurLayer\', the required channel ({0}) is'
                   'not the same as input ({1})\n'.format(
                       self.channels, x.shape[1]))

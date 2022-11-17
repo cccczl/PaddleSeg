@@ -264,22 +264,18 @@ class HarDBlock(nn.Layer):
         layers_ = [x]
         for layer in range(len(self.layers)):
             link = self.links[layer]
-            tin = []
-            for i in link:
-                tin.append(layers_[i])
-            if len(tin) > 1:
-                x = paddle.concat(tin, axis=1)
-            else:
-                x = tin[0]
+            tin = [layers_[i] for i in link]
+            x = paddle.concat(tin, axis=1) if len(tin) > 1 else tin[0]
             out = self.layers[layer](x)
             layers_.append(out)
 
         t = len(layers_)
-        out_ = []
-        for i in range(t):
-            if (i == 0 and self.keepBase) or \
-                (i == t - 1) or (i % 2 == 1):
-                out_.append(layers_[i])
+        out_ = [
+            layers_[i]
+            for i in range(t)
+            if (i == 0 and self.keepBase) or (i == t - 1) or (i % 2 == 1)
+        ]
+
         out = paddle.concat(out_, 1)
 
         return out
@@ -300,7 +296,7 @@ def get_link(layer, base_ch, growth_rate, grmul):
             link.insert(0, k)
             if i > 0:
                 out_channels *= grmul
-    out_channels = int(int(out_channels + 1) / 2) * 2
+    out_channels = int(out_channels + 1) // 2 * 2
     in_channels = 0
     for i in link:
         ch, _, _ = get_link(i, base_ch, growth_rate, grmul)

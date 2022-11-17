@@ -541,7 +541,7 @@ class APP_EISeg(QMainWindow, Ui_EISeg):
             )
             action.triggered.connect(partial(self.openRecentImage, f))
             menu.addAction(action)
-        if len(files) == 0:
+        if not files:
             menu.addAction(self.tr("无近期文件"))
         self.settings.setValue("recent_files", files)
 
@@ -568,7 +568,7 @@ class APP_EISeg(QMainWindow, Ui_EISeg):
         self.recentModels = [
             m for m in self.recentModels if osp.exists(m["param_path"])
         ]
-        for idx, m in enumerate(self.recentModels):
+        for m in self.recentModels:
             icon = util.newIcon("Model")
             action = QtWidgets.QAction(
                 icon,
@@ -579,15 +579,14 @@ class APP_EISeg(QMainWindow, Ui_EISeg):
                 partial(self.setModelParam, m["model_name"], m["param_path"])
             )
             menu.addAction(action)
-        if len(self.recentModels) == 0:
+        if not self.recentModels:
             menu.addAction(self.tr("无近期模型记录"))
         self.settings.setValue("recent_params", self.recentModels)
 
     def setModelParam(self, modelName, paramPath):
         if self.changeModel(ModelsNick[modelName][1]):
             self.comboModelSelect.setCurrentText(self.tr(ModelsNick[modelName][0]))  # 更改显示
-            res = self.changeParam(paramPath)
-            if res:
+            if res := self.changeParam(paramPath):
                 return True
         return False
 
@@ -788,7 +787,7 @@ class APP_EISeg(QMainWindow, Ui_EISeg):
             self.controller.labelList.remove(labelIdx)
             table.removeRow(row)
 
-        if col == 0 or col == 1:
+        if col in [0, 1]:
             for cl in range(2):
                 for idx in range(len(self.controller.labelList)):
                     table.item(idx, cl).setBackground(QtGui.QColor(255, 255, 255))
@@ -808,7 +807,7 @@ class APP_EISeg(QMainWindow, Ui_EISeg):
             pass
 
     def delActivePolygon(self):
-        for idx, polygon in enumerate(self.scene.polygon_items):
+        for polygon in self.scene.polygon_items:
             if polygon.hasFocus():
                 res = self.warn(
                     self.tr("确认删除？"),
@@ -820,12 +819,11 @@ class APP_EISeg(QMainWindow, Ui_EISeg):
 
     def delPolygon(self, polygon):
         polygon.remove()
-        if self.save_status["coco"]:
-            if polygon.coco_id:
-                self.coco.delAnnotation(
-                    polygon.coco_id,
-                    self.coco.imgNameToId[osp.basename(self.imagePath)],
-                )
+        if self.save_status["coco"] and polygon.coco_id:
+            self.coco.delAnnotation(
+                polygon.coco_id,
+                self.coco.imgNameToId[osp.basename(self.imagePath)],
+            )
         self.setDirty()
 
     def delActivePoint(self):
@@ -856,17 +854,14 @@ class APP_EISeg(QMainWindow, Ui_EISeg):
 
     def openImage(self):
         formats = [
-            "*.{}".format(fmt.data().decode())
+            f"*.{fmt.data().decode()}"
             for fmt in QtGui.QImageReader.supportedImageFormats()
         ]
-        filters = "Image & Label files (%s)" % " ".join(formats)
+
+        filters = f'Image & Label files ({" ".join(formats)})'
 
         recentPath = self.settings.value("recent_files", [])
-        if len(recentPath) == 0:
-            recentPath = "."
-        else:
-            recentPath = osp.dirname(recentPath[-1])
-
+        recentPath = "." if len(recentPath) == 0 else osp.dirname(recentPath[-1])
         file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
             self.tr("选择待标注图片") + " - " + __APPNAME__,
@@ -883,10 +878,7 @@ class APP_EISeg(QMainWindow, Ui_EISeg):
     def openFolder(self):
         # 1. 选择文件夹
         recentPath = self.settings.value("recent_files", [])
-        if len(recentPath) == 0:
-            recentPath = "."
-        else:
-            recentPath = osp.dirname(recentPath[-1])
+        recentPath = "." if len(recentPath) == 0 else osp.dirname(recentPath[-1])
         self.inputDir = QtWidgets.QFileDialog.getExistingDirectory(
             self,
             self.tr("选择待标注图片文件夹") + " - " + __APPNAME__,
@@ -907,7 +899,7 @@ class APP_EISeg(QMainWindow, Ui_EISeg):
         imagePaths = os.listdir(self.inputDir)
         exts = QtGui.QImageReader.supportedImageFormats()
         imagePaths = [n for n in imagePaths if n.split(".")[-1] in exts]
-        if len(imagePaths) == 0:
+        if not imagePaths:
             return
         # 3.2 设置默认输出路径为文件夹下的 label 文件夹
         opd = osp.join(self.inputDir, "label")
@@ -931,7 +923,7 @@ class APP_EISeg(QMainWindow, Ui_EISeg):
         # 3.4 加载已有的标注
         if self.outputDir is not None and osp.exists(self.outputDir):
             self.changeOutputDir(self.outputDir)
-        if len(self.imagePaths) != 0:
+        if self.imagePaths:
             self.currIdx = 0
             self.turnImg(0)
 
@@ -1030,9 +1022,9 @@ class APP_EISeg(QMainWindow, Ui_EISeg):
         if self.currIdx >= len(self.imagePaths) or self.currIdx < 0:
             self.currIdx -= delta
             if delta == 1:
-                self.statusbar.showMessage(self.tr(f"没有后一张图片"))
+                self.statusbar.showMessage(self.tr("没有后一张图片"))
             else:
-                self.statusbar.showMessage(self.tr(f"没有前一张图片"))
+                self.statusbar.showMessage(self.tr("没有前一张图片"))
             self.saveImage(False)
             return
         else:
@@ -1047,8 +1039,8 @@ class APP_EISeg(QMainWindow, Ui_EISeg):
         if not self.controller:
             self.warn(self.tr("模型未加载"), self.tr("尚未加载模型，请先加载模型！"))
             self.changeParam()
-            if not self.controller:
-                return
+        if not self.controller:
+            return
         if self.controller.is_incomplete_mask:
             self.saveLabel()
         toRow = self.listFiles.currentRow()

@@ -74,7 +74,7 @@ class MattingDataset(paddle.io.Dataset):
         self.separator = separator
 
         # check file
-        if mode == 'train' or mode == 'trainval':
+        if mode in ['train', 'trainval']:
             if train_file is None:
                 raise ValueError(
                     "When `mode` is 'train' or 'trainval', `train_file must be provided!"
@@ -83,7 +83,7 @@ class MattingDataset(paddle.io.Dataset):
                 train_file = [train_file]
             file_list = train_file
 
-        if mode == 'val' or mode == 'trainval':
+        if mode in ['val', 'trainval']:
             if val_file is None:
                 raise ValueError(
                     "When `mode` is 'val' or 'trainval', `val_file must be provided!"
@@ -106,10 +106,9 @@ class MattingDataset(paddle.io.Dataset):
                     self.fg_bg_list.append(line)
 
     def __getitem__(self, idx):
-        data = {}
         fg_bg_file = self.fg_bg_list[idx]
         fg_bg_file = fg_bg_file.split(self.separator)
-        data['img_name'] = fg_bg_file[0]  # using in save prediction results
+        data = {'img_name': fg_bg_file[0]}
         fg_file = os.path.join(self.dataset_root, fg_bg_file[0])
         alpha_file = fg_file.replace('/fg', '/alpha')
         fg = cv2.imread(fg_file)
@@ -127,16 +126,13 @@ class MattingDataset(paddle.io.Dataset):
                 data['gt_fields'].append('fg')
                 data['gt_fields'].append('bg')
                 data['gt_fields'].append('alpha')
-            if len(fg_bg_file) == 3 and self.get_trimap:
-                if self.mode == 'val':
-                    trimap_path = os.path.join(self.dataset_root, fg_bg_file[2])
-                    if os.path.exists(trimap_path):
-                        data['trimap'] = trimap_path
-                        data['gt_fields'].append('trimap')
-                        data['ori_trimap'] = cv2.imread(trimap_path, 0)
-                    else:
-                        raise FileNotFoundError(
-                            'trimap is not Found: {}'.format(fg_bg_file[2]))
+            if len(fg_bg_file) == 3 and self.get_trimap and self.mode == 'val':
+                trimap_path = os.path.join(self.dataset_root, fg_bg_file[2])
+                if not os.path.exists(trimap_path):
+                    raise FileNotFoundError(f'trimap is not Found: {fg_bg_file[2]}')
+                data['trimap'] = trimap_path
+                data['gt_fields'].append('trimap')
+                data['ori_trimap'] = cv2.imread(trimap_path, 0)
         else:
             data['img'] = fg
             if self.mode in ['train', 'trainval']:
@@ -149,13 +145,12 @@ class MattingDataset(paddle.io.Dataset):
         data['trans_info'] = []  # Record shape change information
 
         # Generate trimap from alpha if no trimap file provided
-        if self.get_trimap:
-            if 'trimap' not in data:
-                data['trimap'] = self.gen_trimap(
-                    data['alpha'], mode=self.mode).astype('float32')
-                data['gt_fields'].append('trimap')
-                if self.mode == 'val':
-                    data['ori_trimap'] = data['trimap'].copy()
+        if self.get_trimap and 'trimap' not in data:
+            data['trimap'] = self.gen_trimap(
+                data['alpha'], mode=self.mode).astype('float32')
+            data['gt_fields'].append('trimap')
+            if self.mode == 'val':
+                data['ori_trimap'] = data['trimap'].copy()
 
         data = self.transforms(data)
 

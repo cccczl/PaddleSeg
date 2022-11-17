@@ -224,5 +224,4 @@ class SqueezeBodyEdge(nn.Layer):
         grid.unsqueeze(0).tile([input_shape[0], 1, 1, 1])
         grid = grid + paddle.transpose(flow, (0, 2, 3, 1)) / norm
 
-        output = F.grid_sample(input, grid)
-        return output
+        return F.grid_sample(input, grid)

@@ -14,7 +14,7 @@ here = osp.dirname(osp.abspath(__file__))
 
 
 def newIcon(icon):
-    if isinstance(icon, list) or isinstance(icon, tuple):
+    if isinstance(icon, (list, tuple)):
         pixmap = QtGui.QPixmap(100, 100)
         c = icon
         pixmap.fill(QtGui.QColor(c[0], c[1], c[2]))
@@ -105,4 +105,4 @@ class struct(object):
 
 def fmtShortcut(text):
     mod, key = text.split("+", 1)
-    return "<b>%s</b>+<b>%s</b>" % (mod, key)
+    return f"<b>{mod}</b>+<b>{key}</b>"

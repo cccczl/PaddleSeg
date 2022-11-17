@@ -135,7 +135,7 @@ def get_image_list(image_path):
             image_list.append(image_path)
     elif os.path.isdir(image_path):
         image_dir = image_path
-        for root, dirs, files in os.walk(image_path):
+        for root, dirs, files in os.walk(image_dir):
             for f in files:
                 if '.ipynb_checkpoints' in root:
                     continue
@@ -146,7 +146,7 @@ def get_image_list(image_path):
             '`--image_path` is not found. it should be an image file or a directory including images'
         )
 
-    if len(image_list) == 0:
+    if not image_list:
         raise RuntimeError('There are not image file in `--image_path`')
 
     return image_list, image_dir
@@ -172,8 +172,7 @@ def main(args):
             'The verification dataset is not specified in the configuration file.'
         )
 
-    msg = '\n---------------Config Information---------------\n'
-    msg += str(cfg)
+    msg = '\n---------------Config Information---------------\n' + str(cfg)
     msg += '------------------------------------------------'
     logger.info(msg)
 
@@ -183,7 +182,7 @@ def main(args):
     transforms = val_dataset.transforms
     transforms_crop = val_dataset_crop.transforms
     image_list, image_dir = get_image_list(args.image_path)
-    logger.info('Number of predict images = {}'.format(len(image_list)))
+    logger.info(f'Number of predict images = {len(image_list)}')
     predictEnsembleThree(
         model,
         model_1,

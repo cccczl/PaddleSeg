@@ -78,7 +78,7 @@ class SUPERVISELY(Dataset):
                 savepath=savepath,
                 extrapath=savepath,
                 extraname=extraname)
-            
+
         if mode == 'train':
             path = os.path.join(dataset_root, 'supervisely_face_train_easy.txt')
         else:
@@ -129,7 +129,4 @@ class SUPERVISELY(Dataset):
             label, radius=4, num_classes=self.num_classes)
         edge_mask = np.transpose(edge_mask, [1, 2, 0]).squeeze(axis=-1)
         im = np.concatenate([im_aug, im])
-        if self.mode == "train":
-            return im, label, edge_mask
-        else:
-            return im, label
+        return (im, label, edge_mask) if self.mode == "train" else (im, label)

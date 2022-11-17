@@ -4,15 +4,15 @@ from collections.abc import Sequence
 
 class ComponentManager:
     def __init__(self, name=None):
-        self._components_dict = dict()
+        self._components_dict = {}
         self._name = name
 
     def __len__(self):
         return len(self._components_dict)
 
     def __repr__(self):
-        name_str = self._name if self._name else self.__class__.__name__
-        return "{}:{}".format(name_str, list(self._components_dict.keys()))
+        name_str = self._name or self.__class__.__name__
+        return f"{name_str}:{list(self._components_dict.keys())}"
 
     def __getitem__(self, item):
         if isinstance(item, int):
@@ -24,8 +24,7 @@ class ComponentManager:
         return self._components_dict[item]
 
     def __iter__(self):
-        for val in self._components_dict.values():
-            yield val
+        yield from self._components_dict.values()
 
     def keys(self):
         return list(self._components_dict.keys())
@@ -47,16 +46,14 @@ class ComponentManager:
     def _add_single_component(self, component):
         # Currently only support class or function type
         if not (inspect.isclass(component) or inspect.isfunction(component)):
-            raise TypeError(
-                "Expect class/function type, but received {}".format(type(component))
-            )
+            raise TypeError(f"Expect class/function type, but received {type(component)}")
 
         # Obtain the internal name of the component
         component_name = component.__name__
 
         # Check whether the component was added already
         if component_name in self._components_dict.keys():
-            raise KeyError("{} exists already!".format(component_name))
+            raise KeyError(f"{component_name} exists already!")
         else:
             # Take the internal name of the component as its key
             self._components_dict[component_name] = component

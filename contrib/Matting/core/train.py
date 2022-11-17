@@ -77,10 +77,7 @@ def train(model,
         if not paddle.distributed.parallel.parallel_helper._is_parallel_ctx_initialized(
         ):
             paddle.distributed.init_parallel_env()
-            ddp_model = paddle.DataParallel(model)
-        else:
-            ddp_model = paddle.DataParallel(model)
-
+        ddp_model = paddle.DataParallel(model)
     batch_sampler = paddle.io.DistributedBatchSampler(
         train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
 
@@ -113,10 +110,7 @@ def train(model,
             reader_cost_averager.record(time.time() - batch_start)
 
             # model input
-            if nranks > 1:
-                logit_dict = ddp_model(data)
-            else:
-                logit_dict = model(data)
+            logit_dict = ddp_model(data) if nranks > 1 else model(data)
             loss_dict = model.loss(logit_dict, data, losses)
 
             loss_dict['all'].backward()
@@ -146,17 +140,17 @@ def train(model,
                             avg_loss['all'], lr, avg_train_batch_cost,
                             avg_train_reader_cost,
                             batch_cost_averager.get_ips_average(), eta))
-                # print loss
-                loss_str = '[TRAIN] [LOSS] '
-                loss_str = loss_str + 'all={:.4f}'.format(avg_loss['all'])
+                loss_str = '[TRAIN] [LOSS] ' + 'all={:.4f}'.format(avg_loss['all'])
                 for key, value in avg_loss.items():
                     if key != 'all':
-                        loss_str = loss_str + ' ' + key + '={:.4f}'.format(
-                            value)
+                        loss_str = f'{loss_str} {key}' + '={:.4f}'.format(
+                            value
+                        )
+
                 logger.info(loss_str)
                 if use_vdl:
                     for key, value in avg_loss.items():
-                        log_tag = 'Train/' + key
+                        log_tag = f'Train/{key}'
                         log_writer.add_scalar(log_tag, value, iter)
 
                     log_writer.add_scalar('Train/lr', lr, iter)
@@ -165,15 +159,14 @@ def train(model,
                     log_writer.add_scalar('Train/reader_cost',
                                           avg_train_reader_cost, iter)
 
-                for key in avg_loss.keys():
+                for key in avg_loss:
                     avg_loss[key] = 0.
                 reader_cost_averager.reset()
                 batch_cost_averager.reset()
 
             # save model
             if (iter % save_interval == 0 or iter == iters) and local_rank == 0:
-                current_save_dir = os.path.join(save_dir,
-                                                "iter_{}".format(iter))
+                current_save_dir = os.path.join(save_dir, f"iter_{iter}")
                 if not os.path.isdir(current_save_dir):
                     os.makedirs(current_save_dir)
                 paddle.save(model.state_dict(),
@@ -201,22 +194,26 @@ def train(model,
                 model.train()
 
             # save best model and add evaluation results to vdl
-            if (iter % save_interval == 0 or iter == iters) and local_rank == 0:
-                if val_dataset is not None and iter >= eval_begin_iters:
-                    if sad < best_sad:
-                        best_sad = sad
-                        best_model_iter = iter
-                        best_model_dir = os.path.join(save_dir, "best_model")
-                        paddle.save(
-                            model.state_dict(),
-                            os.path.join(best_model_dir, 'model.pdparams'))
-                    logger.info(
-                        '[EVAL] The model with the best validation sad ({:.4f}) was saved at iter {}.'
-                        .format(best_sad, best_model_iter))
+            if (
+                (iter % save_interval == 0 or iter == iters)
+                and local_rank == 0
+                and val_dataset is not None
+                and iter >= eval_begin_iters
+            ):
+                if sad < best_sad:
+                    best_sad = sad
+                    best_model_iter = iter
+                    best_model_dir = os.path.join(save_dir, "best_model")
+                    paddle.save(
+                        model.state_dict(),
+                        os.path.join(best_model_dir, 'model.pdparams'))
+                logger.info(
+                    '[EVAL] The model with the best validation sad ({:.4f}) was saved at iter {}.'
+                    .format(best_sad, best_model_iter))
 
-                    if use_vdl:
-                        log_writer.add_scalar('Evaluate/SAD', sad, iter)
-                        log_writer.add_scalar('Evaluate/MSE', mse, iter)
+                if use_vdl:
+                    log_writer.add_scalar('Evaluate/SAD', sad, iter)
+                    log_writer.add_scalar('Evaluate/MSE', mse, iter)
 
             batch_start = time.time()
 

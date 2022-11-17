@@ -108,8 +108,7 @@ def main(args):
             'The verification dataset is not specified in the configuration file.'
         )
 
-    msg = '\n---------------Config Information---------------\n'
-    msg += str(cfg)
+    msg = '\n---------------Config Information---------------\n' + str(cfg)
     msg += '------------------------------------------------'
     logger.info(msg)
 

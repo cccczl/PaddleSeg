@@ -70,8 +70,7 @@ def blend_mask(image, mask, alpha=0.6):
         mask = mask.copy() + 1
 
     imap = draw_instance_map(mask)
-    result = (image * (1 - alpha) + alpha * imap).astype(np.uint8)
-    return result
+    return (image * (1 - alpha) + alpha * imap).astype(np.uint8)
 
 
 def get_boundaries(instances_masks, boundaries_width=1):

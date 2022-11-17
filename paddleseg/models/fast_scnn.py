@@ -69,7 +69,6 @@ class FastSCNN(nn.Layer):
         self.init_weight()
 
     def forward(self, x):
-        logit_list = []
         input_size = paddle.shape(x)[2:]
         higher_res_features = self.learning_to_downsample(x)
         x = self.global_feature_extractor(higher_res_features)
@@ -80,8 +79,7 @@ class FastSCNN(nn.Layer):
             input_size,
             mode='bilinear',
             align_corners=self.align_corners)
-        logit_list.append(logit)
-
+        logit_list = [logit]
         if self.enable_auxiliary_loss:
             auxiliary_logit = self.auxlayer(higher_res_features)
             auxiliary_logit = F.interpolate(
@@ -176,10 +174,12 @@ class GlobalFeatureExtractor(nn.Layer):
                     blocks,
                     expansion=6,
                     stride=1):
-        layers = []
-        layers.append(block(in_channels, out_channels, expansion, stride))
-        for _ in range(1, blocks):
-            layers.append(block(out_channels, out_channels, expansion, 1))
+        layers = [block(in_channels, out_channels, expansion, stride)]
+        layers.extend(
+            block(out_channels, out_channels, expansion, 1)
+            for _ in range(1, blocks)
+        )
+
         return nn.Sequential(*layers)
 
     def forward(self, x):

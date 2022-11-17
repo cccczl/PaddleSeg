@@ -72,19 +72,14 @@ class GINet(nn.Layer):
 
         c1, c2, c3, c4 = [feat_list[i] for i in self.backbone_indices]
 
-        if self.jpu:
-            return self.jpu(c1, c2, c3, c4)
-        else:
-            return c1, c2, c3, c4
+        return self.jpu(c1, c2, c3, c4) if self.jpu else (c1, c2, c3, c4)
 
     def forward(self, x):
         _, _, h, w = paddle.shape(x)
         _, _, c3, c4 = self.base_forward(x)
 
-        logit_list = []
         x, _ = self.head(c4)
-        logit_list.append(x)
-
+        logit_list = [x]
         if self.aux:
             auxout = self.auxlayer(c3)
 

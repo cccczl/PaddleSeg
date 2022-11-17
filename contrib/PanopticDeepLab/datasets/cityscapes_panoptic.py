@@ -71,7 +71,7 @@ class CityscapesPanoptic(paddle.io.Dataset):
                  stuff_area=2048):
         self.dataset_root = dataset_root
         self.transforms = Compose(transforms)
-        self.file_list = list()
+        self.file_list = []
         self.ins_list = []
         mode = mode.lower()
         self.mode = mode
@@ -82,8 +82,7 @@ class CityscapesPanoptic(paddle.io.Dataset):
         self.stuff_area = stuff_area
 
         if mode not in ['train', 'val']:
-            raise ValueError(
-                "mode should be 'train' or 'val' , but got {}.".format(mode))
+            raise ValueError(f"mode should be 'train' or 'val' , but got {mode}.")
 
         if self.transforms is None:
             raise ValueError("`transforms` is necessary, but it is None.")
@@ -97,8 +96,9 @@ class CityscapesPanoptic(paddle.io.Dataset):
                 "The dataset is not Found or the folder structure is nonconfoumance."
             )
         json_filename = os.path.join(
-            self.dataset_root, 'gtFine',
-            'cityscapes_panoptic_{}_trainId.json'.format(mode))
+            self.dataset_root, 'gtFine', f'cityscapes_panoptic_{mode}_trainId.json'
+        )
+
         dataset = json.load(open(json_filename))
         img_files = []
         label_files = []
@@ -111,9 +111,14 @@ class CityscapesPanoptic(paddle.io.Dataset):
         for ann in dataset['annotations']:
             ann_file_name = ann['file_name']
             label_files.append(
-                os.path.join(self.dataset_root, 'gtFine',
-                             'cityscapes_panoptic_{}_trainId'.format(mode),
-                             ann_file_name))
+                os.path.join(
+                    self.dataset_root,
+                    'gtFine',
+                    f'cityscapes_panoptic_{mode}_trainId',
+                    ann_file_name,
+                )
+            )
+
             self.ins_list.append(ann['segments_info'])
 
         self.file_list = [[
@@ -157,11 +162,9 @@ class CityscapesPanoptic(paddle.io.Dataset):
 
     def __getitem__(self, idx):
         image_path, label_path = self.file_list[idx]
-        dataset_dict = {}
         im, label = self.transforms(im=image_path, label=label_path)
         label_dict = self.target_transform(label, self.ins_list[idx])
-        for key in label_dict.keys():
-            dataset_dict[key] = label_dict[key]
+        dataset_dict = {key: label_dict[key] for key in label_dict.keys()}
         dataset_dict['image'] = im
         if self.mode == 'val':
             raw_label = np.asarray(Image.open(label_path))
@@ -189,8 +192,8 @@ class CityscapesPanoptic(paddle.io.Dataset):
             return image, raw_semantic_label, raw_instance_label, raw_panoptic_label
         else:
             raise ValueError(
-                '{} is not surpported, please set it one of ("train", "val")'.
-                format(self.mode))
+                f'{self.mode} is not surpported, please set it one of ("train", "val")'
+            )
 
     def __len__(self):
         return len(self.file_list)

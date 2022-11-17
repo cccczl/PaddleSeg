@@ -106,10 +106,11 @@ class PanopticTargetGenerator(object):
         offset_weights = np.zeros_like(panoptic, dtype=np.uint8)
         for seg in segments:
             cat_id = seg["category_id"]
-            if self.ignore_crowd_in_semantic:
-                if not seg['iscrowd']:
-                    semantic[panoptic == seg["id"]] = cat_id
-            else:
+            if (
+                self.ignore_crowd_in_semantic
+                and not seg['iscrowd']
+                or not self.ignore_crowd_in_semantic
+            ):
                 semantic[panoptic == seg["id"]] = cat_id
             if cat_id in self.thing_list:
                 foreground[panoptic == seg["id"]] = 1
@@ -117,11 +118,11 @@ class PanopticTargetGenerator(object):
                 # Ignored regions are not in `segments`.
                 # Handle crowd region.
                 center_weights[panoptic == seg["id"]] = 1
-                if self.ignore_stuff_in_offset:
-                    # Handle stuff region.
-                    if cat_id in self.thing_list:
-                        offset_weights[panoptic == seg["id"]] = 1
-                else:
+                if (
+                    self.ignore_stuff_in_offset
+                    and cat_id in self.thing_list
+                    or not self.ignore_stuff_in_offset
+                ):
                     offset_weights[panoptic == seg["id"]] = 1
             if cat_id in self.thing_list:
                 # find instance center
@@ -144,7 +145,7 @@ class PanopticTargetGenerator(object):
                 y, x = int(center_y), int(center_x)
                 # outside image boundary
                 if x < 0 or y < 0 or \
-                        x >= width or y >= height:
+                            x >= width or y >= height:
                     continue
                 sigma = self.sigma
                 # upper left
@@ -250,7 +251,7 @@ class InstanceTargetGenerator(object):
         instance = np.zeros_like(panoptic, dtype=np.int64)
         ids = np.unique(panoptic)
         ins_id = 1
-        for i, id in enumerate(ids):
+        for id in ids:
             if id > 1000:
                 instance[panoptic == id] = ins_id
                 ins_id += 1

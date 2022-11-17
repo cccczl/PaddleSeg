@@ -34,11 +34,9 @@ class BasePredictor(object):
             self.transforms.append(AddHorizontalFlip())
 
     def to_tensor(self, x):
-        if isinstance(x, np.ndarray):
-            if x.ndim == 2:
-                x = x[:,:,None]
-        img = paddle.to_tensor(x.transpose([2,0,1])).astype('float32') / 255
-        return img
+        if isinstance(x, np.ndarray) and x.ndim == 2:
+            x = x[:,:,None]
+        return paddle.to_tensor(x.transpose([2,0,1])).astype('float32') / 255
 
     def set_input_image(self, image):
         image_nd = self.to_tensor(image)
@@ -113,10 +111,10 @@ class BasePredictor(object):
         for clicks_list in clicks_lists:
             clicks_list = clicks_list[:self.net_clicks_limit]
             pos_clicks = [click.coords_and_indx for click in clicks_list if click.is_positive]
-            pos_clicks = pos_clicks + (num_max_points - len(pos_clicks)) * [(-1, -1, -1)]
+            pos_clicks += (num_max_points - len(pos_clicks)) * [(-1, -1, -1)]
 
             neg_clicks = [click.coords_and_indx for click in clicks_list if not click.is_positive]
-            neg_clicks = neg_clicks + (num_max_points - len(neg_clicks)) * [(-1, -1, -1)]
+            neg_clicks += (num_max_points - len(neg_clicks)) * [(-1, -1, -1)]
             total_clicks.append(pos_clicks + neg_clicks)
 
         return paddle.to_tensor(total_clicks)

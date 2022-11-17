@@ -158,11 +158,10 @@ class ISAHead(nn.Layer):
         feat = self.out_conv(paddle.concat([feat, x], axis=1))
         output = self.cls(feat)
 
-        if self.enable_auxiliary_loss:
-            auxout = self.aux(C3)
-            return [output, auxout]
-        else:
+        if not self.enable_auxiliary_loss:
             return [output]
+        auxout = self.aux(C3)
+        return [output, auxout]
 
 
 class SelfAttentionBlock(layers.AttentionBlock):

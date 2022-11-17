@@ -76,11 +76,7 @@ def predict(model,
     model.eval()
     nranks = paddle.distributed.get_world_size()
     local_rank = paddle.distributed.get_rank()
-    if nranks > 1:
-        img_lists = partition_list(image_list, nranks)
-    else:
-        img_lists = [image_list]
-
+    img_lists = partition_list(image_list, nranks) if nranks > 1 else [image_list]
     added_saved_dir = os.path.join(save_dir, 'added_prediction')
     pred_saved_dir = os.path.join(save_dir, 'pseudo_color_prediction')
 
@@ -124,7 +120,7 @@ def predict(model,
                 im_file = im_path.replace(image_dir, '')
             else:
                 im_file = os.path.basename(im_path)
-            if im_file[0] == '/' or im_file[0] == '\\':
+            if im_file[0] in ['/', '\\']:
                 im_file = im_file[1:]
 
             # save added image
@@ -137,8 +133,9 @@ def predict(model,
             # save pseudo color prediction
             pred_mask = utils.visualize.get_pseudo_color_map(pred, color_map)
             pred_saved_path = os.path.join(
-                pred_saved_dir,
-                os.path.splitext(im_file)[0] + ".png")
+                pred_saved_dir, f"{os.path.splitext(im_file)[0]}.png"
+            )
+
             mkdir(pred_saved_path)
             pred_mask.save(pred_saved_path)
 

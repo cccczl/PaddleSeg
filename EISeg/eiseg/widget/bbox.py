@@ -89,19 +89,15 @@ class BBoxAnnotation(QtWidgets.QGraphicsPathItem):
         if l < 3:
             if self.is_added:
                 self.remove_from_scene()
-        else:  # 大于三个点就可以更新，小于三个点删除多边形
-            if self.is_added:
-                self.add_to_scene()
-            else:
-                path_geo = QtGui.QPainterPath()
-                self.create_corners()
-                path_geo.moveTo(self.corner_points[0])
-                for i in range(4):
-                    path_geo.lineTo(self.corner_points[(i + 1) % 4])
-                self.setPath(QtGui.QPainterPath(path_geo))
-                pass
-            pass
-        pass
+        elif self.is_added:
+            self.add_to_scene()
+        else:
+            path_geo = QtGui.QPainterPath()
+            self.create_corners()
+            path_geo.moveTo(self.corner_points[0])
+            for i in range(4):
+                path_geo.lineTo(self.corner_points[(i + 1) % 4])
+            self.setPath(QtGui.QPainterPath(path_geo))
 
     def add_to_scene(self):
         # self.parentItem().scene().addItem(self)
@@ -117,14 +113,16 @@ class BBoxAnnotation(QtWidgets.QGraphicsPathItem):
 
     # @return : [x, y, w, h]
     def to_array(self):
-        np_array = [self._round(self.corner_points[1].x()), 
-                    self._round(self.corner_points[1].y()),  # topLeft
-                    self._round(self.w), self._round(self.h)]
-        return np_array
+        return [
+            self._round(self.corner_points[1].x()),
+            self._round(self.corner_points[1].y()),  # topLeft
+            self._round(self.w),
+            self._round(self.h),
+        ]
 
     def _round(self, number, ind=0):
         nint, ndec = str(number).split(".")
-        res = float(nint + "." + ndec[:ind])
+        res = float(f"{nint}.{ndec[:ind]}")
         if res <= 0:
             res = .0
         return res

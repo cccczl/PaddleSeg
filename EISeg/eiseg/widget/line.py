@@ -22,11 +22,7 @@ class LineItem(QtWidgets.QGraphicsLineItem):
 
     @property
     def width(self):
-        if not self.scene():
-            width = 1
-        else:
-            width = LineItem.fixedWidth / self.scene().scale
-        return width
+        return LineItem.fixedWidth / self.scene().scale if self.scene() else 1
 
     def updateWidth(self):
         self.setPen(QtGui.QPen(self.color, self.width))
@@ -56,5 +52,4 @@ class LineItem(QtWidgets.QGraphicsLineItem):
         w = max(w, 3)
         p = QtCore.QPointF(w, 0)
         s, e = self.line().p1(), self.line().p2()
-        poly = QtGui.QPolygonF([s - p, s + p, e + p, e - p])
-        return poly
+        return QtGui.QPolygonF([s - p, s + p, e + p, e - p])

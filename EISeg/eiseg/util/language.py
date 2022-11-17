@@ -22,11 +22,10 @@ class TransUI(object):
     def put(self, zh_CN):
         if self.is_trans == False:
             return zh_CN
-        else:
-            try:
-                return str(self.trans_dict[zh_CN])
-            except:
-                return zh_CN
+        try:
+            return str(self.trans_dict[zh_CN])
+        except:
+            return zh_CN
 
     # 联网动态翻译
     def tr(self, zh_CN):

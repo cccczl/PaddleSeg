@@ -70,14 +70,14 @@ class Clicker(object):
 
     def _remove_last_click(self):
         click = self.clicks_list.pop()
-        coords = click.coords
-
         if click.is_positive:
             self.num_pos_clicks -= 1
         else:
             self.num_neg_clicks -= 1
 
         if self.gt_mask is not None:
+            coords = click.coords
+
             self.not_clicked_map[coords[0], coords[1]] = True
 
     def reset_clicks(self):

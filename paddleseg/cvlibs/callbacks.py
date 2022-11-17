@@ -33,7 +33,7 @@ class CallbackList(object):
 
     def __init__(self, callbacks=None):
         callbacks = callbacks or []
-        self.callbacks = [c for c in callbacks]
+        self.callbacks = list(callbacks)
 
     def append(self, callback):
         self.callbacks.append(callback)
@@ -145,8 +145,7 @@ class TrainLogger(Callback):
         self.log_freq = log_freq
 
     def _calculate_eta(self, remaining_iters, speed):
-        if remaining_iters < 0:
-            remaining_iters = 0
+        remaining_iters = max(remaining_iters, 0)
         remaining_time = int(remaining_iters * speed)
         result = "{:0>2}:{:0>2}:{:0>2}"
         arr = []
@@ -241,7 +240,7 @@ class ModelCheckpoint(Callback):
     def on_iter_end(self, iter, logs=None):
         logs = logs or {}
         self.iters_since_last_save += 1
-        current_save_dir = os.path.join(self.save_dir, "iter_{}".format(iter))
+        current_save_dir = os.path.join(self.save_dir, f"iter_{iter}")
         current_save_dir = os.path.abspath(current_save_dir)
         #if self.iters_since_last_save % self.period and ParallelEnv().local_rank == 0:
         #self.iters_since_last_save = 0
@@ -271,7 +270,7 @@ class VisualDL(Callback):
         logs = logs or {}
         if iter % self.freq == 0 and ParallelEnv().local_rank == 0:
             for k, v in logs.items():
-                self.writer.add_scalar("Train/{}".format(k), v, iter)
+                self.writer.add_scalar(f"Train/{k}", v, iter)
 
         self.writer.flush()
 

@@ -99,7 +99,7 @@ def auto_tune(args, imgs, img_nums):
     input_names = predictor.get_input_names()
     input_handle = predictor.get_input_handle(input_names[0])
 
-    for i in range(0, num):
+    for i in range(num):
         data = np.array([cfg.transforms(imgs[i])[0]])
         input_handle.reshape(data.shape)
         input_handle.copy_from_cpu(data)
@@ -181,15 +181,15 @@ class Predictor:
         """
         logger.info("Use GPU")
         self.pred_cfg.enable_use_gpu(100, 0)
-        precision_map = {
-            "fp16": PrecisionType.Half,
-            "fp32": PrecisionType.Float32,
-            "int8": PrecisionType.Int8
-        }
-        precision_mode = precision_map[self.args.precision]
-
         if self.args.use_trt:
             logger.info("Use TRT")
+            precision_map = {
+                "fp16": PrecisionType.Half,
+                "fp32": PrecisionType.Float32,
+                "int8": PrecisionType.Int8
+            }
+            precision_mode = precision_map[self.args.precision]
+
             self.pred_cfg.enable_tensorrt_engine(
                 workspace_size=1 << 30,
                 max_batch_size=1,
@@ -199,7 +199,7 @@ class Predictor:
                 use_calib_mode=False)
 
             if use_auto_tune(self.args) and \
-                os.path.exists(self.args.auto_tuned_shape_file):
+                    os.path.exists(self.args.auto_tuned_shape_file):
                 logger.info("Use auto tuned dynamic shape")
                 allow_build_at_runtime = True
                 self.pred_cfg.enable_tuned_tensorrt_dynamic_shape(

@@ -91,8 +91,7 @@ def main(args):
             'The length of val_dataset is 0. Please check if your dataset is valid'
         )
 
-    msg = '\n---------------Config Information---------------\n'
-    msg += str(cfg)
+    msg = '\n---------------Config Information---------------\n' + str(cfg)
     msg += '------------------------------------------------'
     logger.info(msg)
 
@@ -124,7 +123,7 @@ def get_bg(bg_path, img_shape):
         bg[:, :, 1] = 255
 
     elif not os.path.exists(bg_path):
-        raise Exception('The --bg_path is not existed: {}'.format(bg_path))
+        raise Exception(f'The --bg_path is not existed: {bg_path}')
     else:
         bg = cv2.imread(bg_path)
         bg = cv2.resize(bg, (img_shape[1], img_shape[0]))
